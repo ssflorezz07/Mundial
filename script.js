@@ -1847,13 +1847,14 @@ function loadQuinielaFromStorage() {
     }
     
     const adminCheckbox = document.getElementById('registerAsAdmin');
-    if (adminCheckbox) {
+    const adminRoleGroup = document.getElementById('adminRoleGroup');
+    if (adminCheckbox && adminRoleGroup) {
         db.collection('perfiles').where('role', '==', 'admin').get()
             .then(snapshot => {
-                adminCheckbox.parentElement.style.display = snapshot.empty ? 'block' : 'none';
+                adminRoleGroup.style.display = snapshot.empty ? 'block' : 'none';
             })
             .catch(() => {
-                adminCheckbox.parentElement.style.display = 'none';
+                adminRoleGroup.style.display = 'none';
             });
     }
     
@@ -4289,6 +4290,28 @@ function borrarTodasPredicciones() {
 
 // ===== FIN PANEL DE ADMINISTRACIÓN =====
 
+// Función de emergencia para restaurar acceso admin
+function restoreAdmin() {
+    const user = firebase.auth().currentUser;
+    if (!user) {
+        alert('Debes iniciar sesión primero');
+        return;
+    }
+    db.collection('perfiles').doc(user.uid).update({ role: 'admin' })
+        .then(() => {
+            const usuario = getCurrentUser();
+            if (usuario) {
+                usuario.role = 'admin';
+                localStorage.setItem('usuarioActual', JSON.stringify(usuario));
+            }
+            renderNav();
+            alert('¡Cuenta promovida a admin! Recarga la página.');
+        })
+        .catch(e => {
+            alert('Error: ' + e.message);
+        });
+}
+
 // Exponer funciones globalmente para onclick handlers
 window.checkPaniniAccess = checkPaniniAccess;
 window.toggleSticker = toggleSticker;
@@ -4302,6 +4325,7 @@ window.borrarTodasPredicciones = borrarTodasPredicciones;
 window.abrirModalPerfil = abrirModalPerfil;
 window.cerrarModalPerfil = cerrarModalPerfil;
 window.cerrarSesion = cerrarSesion;
+window.restoreAdmin = restoreAdmin;
 
 
 function recuperarContrasena() {
