@@ -1093,6 +1093,11 @@ function renderMatchCards(matchList) {
         const isKnockout = ["16avos", "Octavos", "Cuartos", "Semifinal", "3° lugar", "Final"].includes(m.group);
         const labelText = groupLabels[m.group] || 'Grupo ' + m.group;
         
+        const matchIndex = matches.indexOf(m);
+        const res = resultadosPartidos[matchIndex] || {};
+        const score1Display = res.score1 !== undefined ? res.score1 : '-';
+        const score2Display = res.score2 !== undefined ? res.score2 : '-';
+        
         const flag1 = isKnockout ? '<span style="font-size:1.5rem;">🏳️</span>' : getTeamImage(m.team1, "small");
         const flag2 = isKnockout ? '<span style="font-size:1.5rem;">🏳️</span>' : getTeamImage(m.team2, "small");
         
@@ -1108,8 +1113,9 @@ function renderMatchCards(matchList) {
                     ${flag1}
                 </div>
                 <div class="match-score" style="display:flex;align-items:center;gap:8px;background:#0a0f2c;padding:10px 20px;border-radius:8px;">
-                    <span style="color:#f0c040;font-size:1.5rem;font-weight:700;">-</span>
-                    <span style="color:#f0c040;font-size:1.5rem;font-weight:700;">-</span>
+                    <span class="match-score-value" style="color:#f0c040;font-size:1.5rem;font-weight:700;">${score1Display}</span>
+                    <span class="match-score-separator" style="color:#f0c040;font-size:1.5rem;font-weight:700;">-</span>
+                    <span class="match-score-value" style="color:#f0c040;font-size:1.5rem;font-weight:700;">${score2Display}</span>
                 </div>
                 <div class="team-right" style="display:flex;flex-direction:row;align-items:center;gap:10px;text-align:left;flex:1;justify-content:flex-start;">
                     ${flag2}
