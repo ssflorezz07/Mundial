@@ -566,6 +566,7 @@ matches.push(...knockoutMatches);
 
 let quiniela = {};
 let prediccionesData = [];
+let resultadosPartidos = {};
 
 const teamInfoData = {
     "México": { group: "A", firstWC: 1958, totalAppearances: 17, bestResult: "Campeón (1970, 1986)", titles: 2, starPlayer: "Santiago Giménez", coach: "Javier Aguirre", squad: ["Carlos Acevedo", "Raúl Rangel", "Guillermo Ochoa", "Mateo Chávez", "Jesús Gallardo", "César Montes", "Israel Reyes", "Jorge Sánchez", "Johan Vásquez", "Edson Álvarez", "Luis Chávez", "Álvaro Fidalgo", "Brian Gutiérrez", "César Huerta", "Erik Lira", "Gilberto Mora", "Orbelín Pineda", "Luis Romo", "Obed Vargas", "Roberto Alvarado", "Santiago Giménez", "Armando González", "Raúl Jiménez", "Guillermo Martínez", "Julián Quiñones", "Alexis Vega"] },
@@ -719,6 +720,7 @@ function init() {
     try { loadQuinielaFromStorage(); } catch(e) {}
     try { setupScrollSpy(); } catch(e) {}
     setTimeout(checkPaniniAccess, 500);
+    try { cargarResultados(); } catch(e) {}
     
     // Firebase Auth state listener
     firebase.auth().onAuthStateChanged(function(user) {
@@ -1053,7 +1055,8 @@ function renderMatches() {
     const list = document.getElementById('matchList');
     const groupFilter = document.getElementById('groupFilter');
     
-    const sortedMatches = [...matches].sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
+    const sortedWithIndex = [...matches].map((m, i) => ({ ...m, _index: i }))
+        .sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
     
     const uniqueGroups = [...new Set(matches.map(m => m.group))];
     const groupLabels = {
@@ -1069,12 +1072,12 @@ function renderMatches() {
     
     groupFilter.addEventListener('change', () => {
         const filterMatches = groupFilter.value === 'all' 
-            ? sortedMatches 
-            : sortedMatches.filter(m => m.group === groupFilter.value);
+            ? sortedWithIndex 
+            : sortedWithIndex.filter(m => m.group === groupFilter.value);
         list.innerHTML = renderMatchCards(filterMatches);
     });
     
-    list.innerHTML = renderMatchCards(sortedMatches);
+    list.innerHTML = renderMatchCards(sortedWithIndex);
 }
 
 function renderMatchCards(matchList) {
@@ -1094,6 +1097,10 @@ function renderMatchCards(matchList) {
         const flag1 = isKnockout ? '<span style="font-size:1.5rem;">🏳️</span>' : getTeamImage(m.team1, "small");
         const flag2 = isKnockout ? '<span style="font-size:1.5rem;">🏳️</span>' : getTeamImage(m.team2, "small");
         
+        const res = resultadosPartidos ? resultadosPartidos[m._index] : null;
+        const s1 = res !== null ? res.score1 : '-';
+        const s2 = res !== null ? res.score2 : '-';
+        
         return `
         <div class="match-card" data-match-key="${m.group}-${m.team1}-${m.team2}-${m.date}" style="display:flex;flex-direction:column;gap:10px;padding:20px;background:#0f172a;border-left:4px solid #f0c040;border-radius:8px;margin-bottom:15px;transition:0.2s;cursor:pointer;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='#0f172a'">
             <div class="match-info" style="display:flex;justify-content:space-between;align-items:center;">
@@ -1106,8 +1113,8 @@ function renderMatchCards(matchList) {
                     ${flag1}
                 </div>
                 <div class="match-score" style="display:flex;align-items:center;gap:8px;background:#0a0f2c;padding:10px 20px;border-radius:8px;">
-                    <span style="color:#f0c040;font-size:1.5rem;font-weight:700;">-</span>
-                    <span style="color:#f0c040;font-size:1.5rem;font-weight:700;">-</span>
+                    <span style="color:#f0c040;font-size:1.5rem;font-weight:700;">${s1}</span>
+                    <span style="color:#f0c040;font-size:1.5rem;font-weight:700;">${s2}</span>
                 </div>
                 <div class="team-right" style="display:flex;flex-direction:row;align-items:center;gap:10px;text-align:left;flex:1;justify-content:flex-start;">
                     ${flag2}
@@ -4276,6 +4283,16 @@ function renderAdminPartidos() {
     const container = document.getElementById('adminPartidosList');
     if (!container) return;
     
+    const allGroups = ['A','B','C','D','E','F','G','H','I','J','K','L','16avos','Octavos','Cuartos','Semifinal','3° lugar','Final'];
+    const groupLabels = {
+        "16avos": "Dieciseisavos de Final",
+        "Octavos": "Octavos de Final",
+        "Cuartos": "Cuartos de Final",
+        "Semifinal": "Semifinales",
+        "3° lugar": "Tercer Lugar",
+        "Final": "Final"
+    };
+    
     const groups = {};
     matches.forEach((m, i) => {
         if (!groups[m.group]) groups[m.group] = [];
@@ -4283,17 +4300,24 @@ function renderAdminPartidos() {
     });
     
     let html = '';
-    ['A','B','C','D','E','F','G','H','I','J','K','L'].forEach(g => {
-        if (!groups[g]) return;
-        html += `<div class="admin-match-group"><h4>Grupo ${g}</h4>`;
+    allGroups.forEach(g => {
+        if (!groups[g] || groups[g].length === 0) return;
+        const label = groupLabels[g] || 'Grupo ' + g;
+        html += `<div class="admin-match-group"><h4>${label}</h4>`;
         groups[g].forEach(m => {
+            const res = resultadosPartidos[m.index] || {};
             html += `
-            <div class="admin-match-item">
+            <div class="admin-match-item" style="flex-direction:column;align-items:stretch;gap:6px;">
                 <div class="admin-match-info">
                     <span class="admin-match-teams">${m.team1} vs ${m.team2}</span>
                     <span class="admin-match-details">${m.date} • ${m.time} • ${m.venue}</span>
                 </div>
-                <button class="btn-admin-action edit" onclick="editarPartido(${m.index})">Editar</button>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <input type="number" id="score1_${m.index}" value="${res.score1 !== undefined ? res.score1 : ''}" min="0" max="99" style="width:55px;padding:6px;text-align:center;background:#0f172a;color:#fff;border:1px solid #f0c040;border-radius:4px;font-size:0.95rem;">
+                    <span style="color:#f0c040;font-weight:700;font-size:1.2rem;">-</span>
+                    <input type="number" id="score2_${m.index}" value="${res.score2 !== undefined ? res.score2 : ''}" min="0" max="99" style="width:55px;padding:6px;text-align:center;background:#0f172a;color:#fff;border:1px solid #f0c040;border-radius:4px;font-size:0.95rem;">
+                    <button class="btn-admin-action edit" onclick="guardarResultado(${m.index})" style="margin-left:auto;">Guardar</button>
+                </div>
             </div>`;
         });
         html += `</div>`;
@@ -4302,24 +4326,51 @@ function renderAdminPartidos() {
     container.innerHTML = html;
 }
 
-function editarPartido(index) {
-    const match = matches[index];
-    if (!match) return;
+function guardarResultado(index) {
+    const input1 = document.getElementById('score1_' + index);
+    const input2 = document.getElementById('score2_' + index);
+    if (!input1 || !input2) return;
     
-    const newDate = prompt('Fecha (YYYY-MM-DD):', match.date);
-    if (newDate === null) return;
-    const newTime = prompt('Hora (HH:MM):', match.time);
-    if (newTime === null) return;
+    const score1 = parseInt(input1.value);
+    const score2 = parseInt(input2.value);
     
-    matches[index].date = newDate;
-    matches[index].time = newTime;
+    if (isNaN(score1) || isNaN(score2)) {
+        alert('Ingresa ambos marcadores');
+        return;
+    }
     
-    renderAdminPartidos();
-    renderMatches();
-    renderCalendar();
-    renderQuiniela();
+    const data = { score1, score2, updatedAt: new Date().toISOString() };
     
-    alert('Partido actualizado correctamente');
+    if (typeof window.db !== 'undefined') {
+        window.db.collection('resultados').doc(index.toString()).set(data)
+            .then(() => {
+                console.log('Resultado guardado en Firebase');
+                resultadosPartidos[index] = { score1, score2 };
+                renderAdminPartidos();
+                renderMatches();
+            })
+            .catch(e => {
+                console.log('Error guardando en Firestore, guardado local:', e);
+                resultadosPartidos[index] = { score1, score2 };
+                renderAdminPartidos();
+                renderMatches();
+            });
+    } else {
+        resultadosPartidos[index] = { score1, score2 };
+        renderAdminPartidos();
+        renderMatches();
+    }
+}
+
+function cargarResultados() {
+    if (typeof window.db === 'undefined') return;
+    window.db.collection('resultados').get().then(snapshot => {
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            resultadosPartidos[parseInt(doc.id)] = { score1: data.score1, score2: data.score2 };
+        });
+        renderMatches();
+    }).catch(e => console.log('Error cargando resultados:', e));
 }
 
 function renderAdminPredicciones() {
@@ -4409,7 +4460,7 @@ window.filterPaniniByGroup = filterPaniniByGroup;
 window.showAdminTab = showAdminTab;
 window.cambiarRol = cambiarRol;
 window.eliminarUsuario = eliminarUsuario;
-window.editarPartido = editarPartido;
+window.guardarResultado = guardarResultado;
 window.borrarTodasPredicciones = borrarTodasPredicciones;
 window.abrirModalPerfil = abrirModalPerfil;
 window.cerrarModalPerfil = cerrarModalPerfil;
