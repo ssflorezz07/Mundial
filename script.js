@@ -1074,9 +1074,11 @@ function renderMatches() {
             ? sortedMatches 
             : sortedMatches.filter(m => m.group === groupFilter.value);
         list.innerHTML = renderMatchCards(filterMatches);
+        aplicarResultados();
     });
     
     list.innerHTML = renderMatchCards(sortedMatches);
+    aplicarResultados();
 }
 
 function renderMatchCards(matchList) {
@@ -1101,12 +1103,9 @@ function renderMatchCards(matchList) {
             mm.team1 === m.team1 && mm.team2 === m.team2 &&
             mm.group === m.group
         );
-        const res = matchIndex >= 0 && resultadosPartidos ? resultadosPartidos[matchIndex] : null;
-        const s1 = res !== null ? res.score1 : '-';
-        const s2 = res !== null ? res.score2 : '-';
         
         return `
-        <div class="match-card" data-match-key="${m.group}-${m.team1}-${m.team2}-${m.date}" style="display:flex;flex-direction:column;gap:10px;padding:20px;background:#0f172a;border-left:4px solid #f0c040;border-radius:8px;margin-bottom:15px;transition:0.2s;cursor:pointer;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='#0f172a'">
+        <div class="match-card" data-match-key="${m.group}-${m.team1}-${m.team2}-${m.date}" data-match-index="${matchIndex}" style="display:flex;flex-direction:column;gap:10px;padding:20px;background:#0f172a;border-left:4px solid #f0c040;border-radius:8px;margin-bottom:15px;transition:0.2s;cursor:pointer;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='#0f172a'">
             <div class="match-info" style="display:flex;justify-content:space-between;align-items:center;">
                 <span class="match-date" style="color:#94a3b8;font-size:0.9rem;">${formatDate(m.date, m.time)}</span>
                 <span class="match-group" style="background:#f0c040;color:#0f172a;font-size:0.8rem;font-weight:700;padding:4px 12px;border-radius:12px;">${labelText}</span>
@@ -1117,8 +1116,8 @@ function renderMatchCards(matchList) {
                     ${flag1}
                 </div>
                 <div class="match-score" style="display:flex;align-items:center;gap:8px;background:#0a0f2c;padding:10px 20px;border-radius:8px;">
-                    <span style="color:#f0c040;font-size:1.5rem;font-weight:700;">${s1}</span>
-                    <span style="color:#f0c040;font-size:1.5rem;font-weight:700;">${s2}</span>
+                    <span style="color:#f0c040;font-size:1.5rem;font-weight:700;">-</span>
+                    <span style="color:#f0c040;font-size:1.5rem;font-weight:700;">-</span>
                 </div>
                 <div class="team-right" style="display:flex;flex-direction:row;align-items:center;gap:10px;text-align:left;flex:1;justify-content:flex-start;">
                     ${flag2}
@@ -1132,6 +1131,20 @@ function renderMatchCards(matchList) {
             </div>
         </div>
     `}).join('');
+}
+
+function aplicarResultados() {
+    document.querySelectorAll('.match-card').forEach(card => {
+        const idx = parseInt(card.dataset.matchIndex);
+        if (isNaN(idx)) return;
+        const res = resultadosPartidos ? resultadosPartidos[idx] : null;
+        if (!res) return;
+        const spans = card.querySelectorAll('.match-score span');
+        if (spans.length >= 2) {
+            spans[0].textContent = res.score1;
+            spans[1].textContent = res.score2;
+        }
+    });
 }
 
 function renderCalendar() {
@@ -4374,6 +4387,7 @@ function cargarResultados() {
             resultadosPartidos[parseInt(doc.id)] = { score1: data.score1, score2: data.score2 };
         });
         renderMatches();
+        aplicarResultados();
     }).catch(e => console.log('Error cargando resultados:', e));
 }
 
