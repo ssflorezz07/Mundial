@@ -1582,21 +1582,24 @@ function cargarPrediccionesMiCuenta() {
     }
     
     if (typeof window.db !== 'undefined') {
-        window.db.collection('predicciones').where('email', '==', usuario.email).orderBy('fecha', 'desc').get()
+        window.db.collection('predicciones').where('email', '==', usuario.email).get()
         .then((snapshot) => {
             let totalPartidos = 0;
-            let index = 1;
+            let docs = [];
             snapshot.forEach((doc) => {
-                const data = doc.data();
+                docs.push({ id: doc.id, data: doc.data() });
+            });
+            docs.sort((a, b) => (b.data.fecha || '').localeCompare(a.data.fecha || ''));
+            docs.forEach((doc, idx) => {
+                const data = doc.data;
                 const pred = data.predicciones || {};
                 totalPartidos += Object.keys(pred).length;
                 prediccionesData.push({
                     id: doc.id,
-                    index: snapshot.size - index + 1,
+                    index: docs.length - idx,
                     fecha: data.fecha,
                     predicciones: pred
                 });
-                index++;
             });
             
             if (document.getElementById('statPredicciones')) document.getElementById('statPredicciones').textContent = prediccionesData.length;
