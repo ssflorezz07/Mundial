@@ -1074,11 +1074,9 @@ function renderMatches() {
             ? sortedMatches 
             : sortedMatches.filter(m => m.group === groupFilter.value);
         list.innerHTML = renderMatchCards(filterMatches);
-        aplicarResultados();
     });
     
     list.innerHTML = renderMatchCards(sortedMatches);
-    aplicarResultados();
 }
 
 function renderMatchCards(matchList) {
@@ -1098,14 +1096,8 @@ function renderMatchCards(matchList) {
         const flag1 = isKnockout ? '<span style="font-size:1.5rem;">🏳️</span>' : getTeamImage(m.team1, "small");
         const flag2 = isKnockout ? '<span style="font-size:1.5rem;">🏳️</span>' : getTeamImage(m.team2, "small");
         
-        const matchIndex = matches.findIndex(mm =>
-            mm.date === m.date && mm.time === m.time &&
-            mm.team1 === m.team1 && mm.team2 === m.team2 &&
-            mm.group === m.group
-        );
-        
         return `
-        <div class="match-card" data-match-key="${m.group}-${m.team1}-${m.team2}-${m.date}" data-match-index="${matchIndex}" style="display:flex;flex-direction:column;gap:10px;padding:20px;background:#0f172a;border-left:4px solid #f0c040;border-radius:8px;margin-bottom:15px;transition:0.2s;cursor:pointer;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='#0f172a'">
+        <div class="match-card" data-match-key="${m.group}-${m.team1}-${m.team2}-${m.date}" style="display:flex;flex-direction:column;gap:10px;padding:20px;background:#0f172a;border-left:4px solid #f0c040;border-radius:8px;margin-bottom:15px;transition:0.2s;cursor:pointer;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='#0f172a'">
             <div class="match-info" style="display:flex;justify-content:space-between;align-items:center;">
                 <span class="match-date" style="color:#94a3b8;font-size:0.9rem;">${formatDate(m.date, m.time)}</span>
                 <span class="match-group" style="background:#f0c040;color:#0f172a;font-size:0.8rem;font-weight:700;padding:4px 12px;border-radius:12px;">${labelText}</span>
@@ -1131,20 +1123,6 @@ function renderMatchCards(matchList) {
             </div>
         </div>
     `}).join('');
-}
-
-function aplicarResultados() {
-    document.querySelectorAll('.match-card').forEach(card => {
-        const idx = parseInt(card.dataset.matchIndex);
-        if (isNaN(idx)) return;
-        const res = resultadosPartidos ? resultadosPartidos[idx] : null;
-        if (!res) return;
-        const spans = card.querySelectorAll('.match-score span');
-        if (spans.length >= 2) {
-            spans[0].textContent = res.score1;
-            spans[1].textContent = res.score2;
-        }
-    });
 }
 
 function renderCalendar() {
@@ -1535,7 +1513,7 @@ function saveQuinielaToStorage() {
     const usuario = getCurrentUser();
     
     if (typeof window.db !== 'undefined' && usuario.email) {
-        window.db.collection('predicciones').doc(usuario.email).set({
+        window.db.collection('predicciones').add({
             uid: usuario.uid || '',
             email: usuario.email,
             predicciones: quiniela,
@@ -1543,13 +1521,11 @@ function saveQuinielaToStorage() {
         }).then(() => {
             console.log('Predicciones guardadas en Firebase');
             cargarPrediccionesMiCuenta();
-        }).catch(e => {
-            console.log('Firestore no disponible, guardado solo local:', e);
-            cargarPrediccionesMiCuenta();
-        });
-    } else {
-        cargarPrediccionesMiCuenta();
+        }).catch(e => console.log('Error:', e));
     }
+    
+    alert('Predicciones guardadas correctamente');
+    cargarPrediccionesMiCuenta();
 }
 
 function cargarPrediccionesMiCuenta() {
@@ -1605,62 +1581,8 @@ function cargarPrediccionesMiCuenta() {
         return;
     }
     
-    function mostrarPrediccionesLocales() {
-        const predLocal = localStorage.getItem('predicciones');
-        if (!predLocal) {
-            container.innerHTML = `
-                <div class="predicciones-empty">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                    <p>No tienes predicciones guardadas</p>
-                    <span>Ve a la sección de Predicciones para comenzar</span>
-                </div>`;
-            if (document.getElementById('statPredicciones')) document.getElementById('statPredicciones').textContent = '0';
-            if (document.getElementById('statPartidos')) document.getElementById('statPartidos').textContent = '0';
-            return;
-        }
-        const pred = JSON.parse(predLocal);
-        const count = Object.keys(pred).length;
-        if (document.getElementById('statPredicciones')) document.getElementById('statPredicciones').textContent = '1';
-        if (document.getElementById('statPartidos')) document.getElementById('statPartidos').textContent = count;
-
-        let matchesHtml = '';
-        Object.entries(pred).forEach(([key, value]) => {
-            const matchIndex = parseInt(key);
-            const match = matches[matchIndex];
-            if (match) {
-                matchesHtml += `
-                <div class="prediccion-match-row">
-                    <div class="prediccion-match-teams">
-                        <span class="prediccion-team-name">${match.team1}</span>
-                        <span class="prediccion-vs">vs</span>
-                        <span class="prediccion-team-name">${match.team2}</span>
-                    </div>
-                    <div class="prediccion-score">
-                        <span class="prediccion-score-value">${value.team1 || '-'}</span>
-                        <span class="prediccion-score-separator">-</span>
-                        <span class="prediccion-score-value">${value.team2 || '-'}</span>
-                    </div>
-                </div>`;
-            }
-        });
-
-        container.innerHTML = `
-            <div class="prediccion-card">
-                <div class="prediccion-header">
-                    <div class="prediccion-info">
-                        <span class="prediccion-numero">Mis Predicciones</span>
-                        <span class="prediccion-meta">${count} partidos • Guardado local</span>
-                    </div>
-                </div>
-                <div class="prediccion-detalle" style="display:block;">
-                    <div class="prediccion-detalle-title">Partidos Pronosticados</div>
-                    ${matchesHtml}
-                </div>
-            </div>`;
-    }
-
     if (typeof window.db !== 'undefined') {
-        window.db.collection('predicciones').where('email', '==', usuario.email).get()
+        window.db.collection('predicciones').where('email', '==', usuario.email).orderBy('fecha', 'desc').get()
         .then((snapshot) => {
             let totalPartidos = 0;
             let index = 1;
@@ -1681,7 +1603,12 @@ function cargarPrediccionesMiCuenta() {
             if (document.getElementById('statPartidos')) document.getElementById('statPartidos').textContent = totalPartidos;
             
             if (prediccionesData.length === 0) {
-                mostrarPrediccionesLocales();
+                container.innerHTML = `
+                    <div class="predicciones-empty">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                        <p>No tienes predicciones guardadas</p>
+                        <span>Ve a la sección de Predicciones para comenzar</span>
+                    </div>`;
                 return;
             }
             
@@ -1734,8 +1661,12 @@ function cargarPrediccionesMiCuenta() {
             container.innerHTML = html;
         })
         .catch(e => {
-            console.log('Error cargando desde Firestore, usando local:', e);
-            mostrarPrediccionesLocales();
+            console.log('Error:', e);
+            container.innerHTML = `
+                <div class="predicciones-empty">
+                    <p>Error al cargar predicciones</p>
+                    <span>Intenta de nuevo más tarde</span>
+                </div>`;
         });
     } else {
         const predLocal = localStorage.getItem('predicciones');
@@ -4364,18 +4295,15 @@ function guardarResultado(index) {
                 console.log('Resultado guardado en Firebase');
                 resultadosPartidos[index] = { score1, score2 };
                 renderAdminPartidos();
-                renderMatches();
             })
             .catch(e => {
                 console.log('Error guardando en Firestore, guardado local:', e);
                 resultadosPartidos[index] = { score1, score2 };
                 renderAdminPartidos();
-                renderMatches();
             });
     } else {
         resultadosPartidos[index] = { score1, score2 };
         renderAdminPartidos();
-        renderMatches();
     }
 }
 
@@ -4386,8 +4314,6 @@ function cargarResultados() {
             const data = doc.data();
             resultadosPartidos[parseInt(doc.id)] = { score1: data.score1, score2: data.score2 };
         });
-        renderMatches();
-        aplicarResultados();
     }).catch(e => console.log('Error cargando resultados:', e));
 }
 
