@@ -1055,8 +1055,7 @@ function renderMatches() {
     const list = document.getElementById('matchList');
     const groupFilter = document.getElementById('groupFilter');
     
-    const sortedWithIndex = [...matches].map((m, i) => ({ ...m, _index: i }))
-        .sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
+    const sortedMatches = [...matches].sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
     
     const uniqueGroups = [...new Set(matches.map(m => m.group))];
     const groupLabels = {
@@ -1072,12 +1071,12 @@ function renderMatches() {
     
     groupFilter.addEventListener('change', () => {
         const filterMatches = groupFilter.value === 'all' 
-            ? sortedWithIndex 
-            : sortedWithIndex.filter(m => m.group === groupFilter.value);
+            ? sortedMatches 
+            : sortedMatches.filter(m => m.group === groupFilter.value);
         list.innerHTML = renderMatchCards(filterMatches);
     });
     
-    list.innerHTML = renderMatchCards(sortedWithIndex);
+    list.innerHTML = renderMatchCards(sortedMatches);
 }
 
 function renderMatchCards(matchList) {
@@ -1097,7 +1096,12 @@ function renderMatchCards(matchList) {
         const flag1 = isKnockout ? '<span style="font-size:1.5rem;">🏳️</span>' : getTeamImage(m.team1, "small");
         const flag2 = isKnockout ? '<span style="font-size:1.5rem;">🏳️</span>' : getTeamImage(m.team2, "small");
         
-        const res = resultadosPartidos ? resultadosPartidos[m._index] : null;
+        const matchIndex = matches.findIndex(mm =>
+            mm.date === m.date && mm.time === m.time &&
+            mm.team1 === m.team1 && mm.team2 === m.team2 &&
+            mm.group === m.group
+        );
+        const res = matchIndex >= 0 && resultadosPartidos ? resultadosPartidos[matchIndex] : null;
         const s1 = res !== null ? res.score1 : '-';
         const s2 = res !== null ? res.score2 : '-';
         
