@@ -1908,32 +1908,59 @@ function loadQuinielaFromStorage() {
                     );
                     
                     if (usuario) {
-                        // Migrar a Firebase Auth
-                        firebase.auth().createUserWithEmailAndPassword(email, password)
+                        // Intentar primero signIn (por si ya existe en Firebase Auth)
+                        firebase.auth().signInWithEmailAndPassword(email, password)
                             .then((cred) => {
-                                return db.collection('perfiles').doc(cred.user.uid).set({
-                                    nombre: usuario.nombre,
-                                    pais: usuario.pais || '',
-                                    email: usuario.email,
-                                    role: usuario.role || 'usuario',
-                                    fecha: new Date().toISOString()
-                                });
-                            })
-                            .then(() => {
-                                const currentUser = firebase.auth().currentUser;
-                                if (currentUser) {
-                                    loginSuccess({
-                                        uid: currentUser.uid,
-                                        nombre: usuario.nombre,
-                                        email: usuario.email,
-                                        pais: usuario.pais || '',
-                                        role: usuario.role || 'usuario'
-                                    }, messageEl);
-                                }
+                                const fbUser = cred.user;
+                                return db.collection('perfiles').doc(fbUser.uid).get()
+                                    .then(doc => {
+                                        if (doc.exists) {
+                                            const data = doc.data();
+                                            loginSuccess({
+                                                uid: fbUser.uid,
+                                                nombre: data.nombre,
+                                                email: data.email,
+                                                pais: data.pais || '',
+                                                role: data.role || 'usuario'
+                                            }, messageEl);
+                                        } else {
+                                            loginSuccess({
+                                                uid: fbUser.uid,
+                                                nombre: usuario.nombre,
+                                                email: usuario.email,
+                                                pais: usuario.pais || '',
+                                                role: usuario.role || 'usuario'
+                                            }, messageEl);
+                                        }
+                                    });
                             })
                             .catch(() => {
-                                // Si falla migración, igual inicia sesión con cache
-                                loginSuccess(Object.assign({}, usuario, { _localOnly: true }), messageEl);
+                                // Si signIn falla, migrar creando cuenta nueva
+                                firebase.auth().createUserWithEmailAndPassword(email, password)
+                                    .then((cred) => {
+                                        return db.collection('perfiles').doc(cred.user.uid).set({
+                                            nombre: usuario.nombre,
+                                            pais: usuario.pais || '',
+                                            email: usuario.email,
+                                            role: usuario.role || 'usuario',
+                                            fecha: new Date().toISOString()
+                                        });
+                                    })
+                                    .then(() => {
+                                        const currentUser = firebase.auth().currentUser;
+                                        if (currentUser) {
+                                            loginSuccess({
+                                                uid: currentUser.uid,
+                                                nombre: usuario.nombre,
+                                                email: usuario.email,
+                                                pais: usuario.pais || '',
+                                                role: usuario.role || 'usuario'
+                                            }, messageEl);
+                                        }
+                                    })
+                                    .catch(() => {
+                                        loginSuccess(Object.assign({}, usuario, { _localOnly: true }), messageEl);
+                                    });
                             });
                     } else {
                         let msg = 'Email o contraseña incorrectos';
@@ -4291,13 +4318,30 @@ function borrarTodasPredicciones() {
 // ===== FIN PANEL DE ADMINISTRACIÓN =====
 
 // Función de emergencia para restaurar acceso admin
-function restoreAdmin() {
+function restoreAdmin(email) {
     const user = firebase.auth().currentUser;
-    if (!user) {
-        alert('Debes iniciar sesión primero');
+    if (user && !email) {
+        promocionarPorUid(user.uid);
         return;
     }
-    db.collection('perfiles').doc(user.uid).update({ role: 'admin' })
+    const buscarEmail = email || (getCurrentUser() || {}).email;
+    if (!buscarEmail) {
+        alert('No se encontró tu sesión. Escribe restoreAdmin("tu@email.com") en la consola.');
+        return;
+    }
+    db.collection('perfiles').where('email', '==', buscarEmail).get()
+        .then(snapshot => {
+            if (snapshot.empty) {
+                alert('No se encontró tu perfil en la base de datos.');
+                return;
+            }
+            snapshot.forEach(doc => promocionarPorUid(doc.id));
+        })
+        .catch(e => alert('Error: ' + e.message));
+}
+
+function promocionarPorUid(uid) {
+    db.collection('perfiles').doc(uid).update({ role: 'admin' })
         .then(() => {
             const usuario = getCurrentUser();
             if (usuario) {
@@ -4307,9 +4351,7 @@ function restoreAdmin() {
             renderNav();
             alert('¡Cuenta promovida a admin! Recarga la página.');
         })
-        .catch(e => {
-            alert('Error: ' + e.message);
-        });
+        .catch(e => alert('Error: ' + e.message));
 }
 
 // Exponer funciones globalmente para onclick handlers
