@@ -1520,12 +1520,17 @@ function saveQuinielaToStorage() {
             fecha: new Date().toISOString()
         }).then(() => {
             console.log('Predicciones guardadas en Firebase');
+            alert('Predicciones guardadas correctamente');
             cargarPrediccionesMiCuenta();
-        }).catch(e => console.log('Error:', e));
+        }).catch(e => {
+            console.error('Error al guardar en Firebase:', e);
+            alert('Predicciones guardadas localmente. Error al guardar en la nube: ' + e.message);
+            cargarPrediccionesMiCuenta();
+        });
+    } else {
+        alert('Predicciones guardadas correctamente');
+        cargarPrediccionesMiCuenta();
     }
-    
-    alert('Predicciones guardadas correctamente');
-    cargarPrediccionesMiCuenta();
 }
 
 function cargarPrediccionesMiCuenta() {
@@ -1664,75 +1669,80 @@ function cargarPrediccionesMiCuenta() {
             container.innerHTML = html;
         })
         .catch(e => {
-            console.log('Error:', e);
-            container.innerHTML = `
-                <div class="predicciones-empty">
-                    <p>Error al cargar predicciones</p>
-                    <span>Intenta de nuevo más tarde</span>
-                </div>`;
+            console.error('Error al cargar de Firestore:', e);
+            cargarPrediccionesLocales();
         });
     } else {
-        const predLocal = localStorage.getItem('predicciones');
-        if (predLocal) {
-            const pred = JSON.parse(predLocal);
-            const count = Object.keys(pred).length;
-            if (document.getElementById('statPredicciones')) document.getElementById('statPredicciones').textContent = '1';
-            if (document.getElementById('statPartidos')) document.getElementById('statPartidos').textContent = count;
-            
-            prediccionesData.push({
-                index: 1,
-                fecha: new Date().toISOString(),
-                predicciones: pred
-            });
-            
-            let matchesHtml = '';
-            Object.entries(pred).forEach(([key, value]) => {
-                const matchIndex = parseInt(key);
-                const match = matches[matchIndex];
-                if (match) {
-                    matchesHtml += `
-                    <div class="prediccion-match-row">
-                        <div class="prediccion-match-teams">
-                            <span class="prediccion-team-name">${match.team1}</span>
-                            <span class="prediccion-vs">vs</span>
-                            <span class="prediccion-team-name">${match.team2}</span>
-                        </div>
-                        <div class="prediccion-score">
-                            <span class="prediccion-score-value">${value.team1 || '-'}</span>
-                            <span class="prediccion-score-separator">-</span>
-                            <span class="prediccion-score-value">${value.team2 || '-'}</span>
-                        </div>
-                    </div>`;
-                }
-            });
-            
-            container.innerHTML = `
-            <div class="prediccion-card">
-                <div class="prediccion-header">
-                    <div class="prediccion-info" onclick="togglePrediccionDetalle(0)">
-                        <span class="prediccion-numero">Predicción #1</span>
-                        <span class="prediccion-meta">${count} partido${count !== 1 ? 's' : ''} • ${new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+        cargarPrediccionesLocales();
+    }
+}
+
+function cargarPrediccionesLocales() {
+    const container = document.getElementById('misPredicciones');
+    if (!container) return;
+    
+    prediccionesData = [];
+    
+    const predLocal = localStorage.getItem('predicciones');
+    if (predLocal) {
+        const pred = JSON.parse(predLocal);
+        const count = Object.keys(pred).length;
+        if (document.getElementById('statPredicciones')) document.getElementById('statPredicciones').textContent = '1';
+        if (document.getElementById('statPartidos')) document.getElementById('statPartidos').textContent = count;
+        
+        prediccionesData.push({
+            index: 1,
+            fecha: new Date().toISOString(),
+            predicciones: pred
+        });
+        
+        let matchesHtml = '';
+        Object.entries(pred).forEach(([key, value]) => {
+            const matchIndex = parseInt(key);
+            const match = matches[matchIndex];
+            if (match) {
+                matchesHtml += `
+                <div class="prediccion-match-row">
+                    <div class="prediccion-match-teams">
+                        <span class="prediccion-team-name">${match.team1}</span>
+                        <span class="prediccion-vs">vs</span>
+                        <span class="prediccion-team-name">${match.team2}</span>
                     </div>
-                    <div class="prediccion-actions">
-                        <svg id="flechaPred0" class="prediccion-toggle" onclick="togglePrediccionDetalle(0)" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                        <button class="btn-prediccion-delete" onclick="eliminarPrediccionLocal()">Eliminar</button>
+                    <div class="prediccion-score">
+                        <span class="prediccion-score-value">${value.team1 || '-'}</span>
+                        <span class="prediccion-score-separator">-</span>
+                        <span class="prediccion-score-value">${value.team2 || '-'}</span>
                     </div>
-                </div>
-                <div id="prediccionDetalle0" class="prediccion-detalle">
-                    <div class="prediccion-detalle-title">Partidos Pronosticados</div>
-                    ${matchesHtml}
-                </div>
-            </div>`;
-        } else {
-            container.innerHTML = `
-                <div class="predicciones-empty">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                    <p>No hay predicciones guardadas</p>
-                    <span>Ve a la sección de Predicciones para comenzar</span>
                 </div>`;
-            if (document.getElementById('statPredicciones')) document.getElementById('statPredicciones').textContent = '0';
-            if (document.getElementById('statPartidos')) document.getElementById('statPartidos').textContent = '0';
-        }
+            }
+        });
+        
+        container.innerHTML = `
+        <div class="prediccion-card">
+            <div class="prediccion-header">
+                <div class="prediccion-info" onclick="togglePrediccionDetalle(0)">
+                    <span class="prediccion-numero">Predicción #1</span>
+                    <span class="prediccion-meta">${count} partido${count !== 1 ? 's' : ''} • ${new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                </div>
+                <div class="prediccion-actions">
+                    <svg id="flechaPred0" class="prediccion-toggle" onclick="togglePrediccionDetalle(0)" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    <button class="btn-prediccion-delete" onclick="eliminarPrediccionLocal()">Eliminar</button>
+                </div>
+            </div>
+            <div id="prediccionDetalle0" class="prediccion-detalle">
+                <div class="prediccion-detalle-title">Partidos Pronosticados</div>
+                ${matchesHtml}
+            </div>
+        </div>`;
+    } else {
+        container.innerHTML = `
+            <div class="predicciones-empty">
+                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                <p>No hay predicciones guardadas</p>
+                <span>Ve a la sección de Predicciones para comenzar</span>
+            </div>`;
+        if (document.getElementById('statPredicciones')) document.getElementById('statPredicciones').textContent = '0';
+        if (document.getElementById('statPartidos')) document.getElementById('statPartidos').textContent = '0';
     }
 }
 
