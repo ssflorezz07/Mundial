@@ -4,6 +4,9 @@
     <title>FIFA World Cup 2026 - México, Estados Unidos y Canadá</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <script src="script.js"></script>
 </head>
 <body>
@@ -848,19 +851,5 @@
         </div>
     </footer>
     
-    <script>
-        if (typeof firebase !== 'undefined') {
-            const firebaseConfig = {
-                apiKey: "AIzaSyCT-3BZSpeOYbt_H7tiIYWLSMT65WKoUrU",
-                authDomain: "mundial-2026-1846b.firebaseapp.com",
-                projectId: "mundial-2026-1846b",
-                storageBucket: "mundial-2026-1846b.firebasestorage.app",
-                messagingSenderId: "836463033638",
-                appId: "1:836463033638:web:1845f56014b2c2a6a5d5e7"
-            };
-            firebase.initializeApp(firebaseConfig);
-            window.db = firebase.firestore();
-        }
-    </script>
 </body>
 </html>

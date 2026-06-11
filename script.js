@@ -618,6 +618,19 @@ const teamInfoData = {
     "Panamá": { group: "L", firstWC: 2018, totalAppearances: 2, bestResult: "Fase de grupos", titles: 0, starPlayer: "Tomasolina", coach: "Dir. Tec", squad: ["Orlando Mosquera", "Luis Mejía", "César Samudio", "José Córdoba", "Fidel Escobar", "Andrés Andrade", "Michael Amir Murillo", "Eric Davis", "César Blackman", "Jovani Welch", "Adalberto Carrasquilla", "Cristian Martínez", "Aníbal Godoy", "Alberto Quintero", "Edgar Yoel Bárcenas", "José Luis Rodríguez", "Ismael Díaz", "Cecilio Waterman", "Eduardo Guerrero", "José Fajardo"] }
 };
 
+// ===== FIREBASE INIT =====
+const firebaseConfig = {
+    apiKey: "AIzaSyCT-3BZSpeOYbt_H7tiIYWLSMT65WKoUrU",
+    authDomain: "mundial-2026-1846b.firebaseapp.com",
+    projectId: "mundial-2026-1846b",
+    storageBucket: "mundial-2026-1846b.firebasestorage.app",
+    messagingSenderId: "836463033638",
+    appId: "1:836463033638:web:1845f56014b2c2a6a5d5e7"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+window.db = db;
+
 // ===== SISTEMA DE ROLES =====
 
 function getUsuarios() {
@@ -685,9 +698,6 @@ function syncUserRole() {
 // ===== FIN SISTEMA DE ROLES =====
 
 function init() {
-    try { autoPromoteFirstAdmin(); } catch(e) {}
-    try { syncUserRole(); } catch(e) {}
-    
     const usuarioData = localStorage.getItem('usuarioActual');
     if (usuarioData) {
         try {
@@ -708,8 +718,40 @@ function init() {
     try { setupEventListeners(); } catch(e) {}
     try { loadQuinielaFromStorage(); } catch(e) {}
     try { setupScrollSpy(); } catch(e) {}
-    // Verificar acceso a Mi Panini
     setTimeout(checkPaniniAccess, 500);
+    
+    // Firebase Auth state listener
+    firebase.auth().onAuthStateChanged(function(user) {
+        if (user) {
+            const cached = getCurrentUser();
+            if (!cached || cached.uid !== user.uid) {
+                db.collection('perfiles').doc(user.uid).get()
+                    .then(doc => {
+                        if (doc.exists) {
+                            const data = doc.data();
+                            localStorage.setItem('usuarioActual', JSON.stringify({
+                                uid: user.uid,
+                                nombre: data.nombre,
+                                email: data.email,
+                                pais: data.pais || '',
+                                role: data.role || 'usuario',
+                                foto: data.foto || ''
+                            }));
+                            renderNav();
+                            if (document.getElementById('profileName')) {
+                                document.getElementById('profileName').textContent = data.nombre;
+                            }
+                        }
+                    })
+                    .catch(e => console.log('Error loading profile:', e));
+            }
+        } else {
+            if (getCurrentUser() && !getCurrentUser()._localOnly) {
+                localStorage.removeItem('usuarioActual');
+                renderNav();
+            }
+        }
+    });
 }
 
 function renderNav() {
@@ -1470,6 +1512,7 @@ function saveQuinielaToStorage() {
     
     if (typeof window.db !== 'undefined' && usuario.email) {
         window.db.collection('predicciones').add({
+            uid: usuario.uid || '',
             email: usuario.email,
             predicciones: quiniela,
             fecha: new Date().toISOString()
@@ -1769,60 +1812,49 @@ function loadQuinielaFromStorage() {
                 return;
             }
 
-            const usuarios = JSON.parse(localStorage.getItem('usuarios') || '[]');
-            console.log('Registration - Current users:', usuarios.length);
-            
-            if (usuarios.some(u => (u.email || '').toLowerCase() === email.toLowerCase())) {
-                messageEl.className = 'cuenta-message error';
-                messageEl.textContent = 'Este correo ya está registrado';
-                return;
-            }
+            messageEl.className = 'cuenta-message';
+            messageEl.textContent = 'Creando cuenta...';
 
-            let role = 'usuario';
-            const adminCheckbox = document.getElementById('registerAsAdmin');
-            if (adminCheckbox && adminCheckbox.checked) {
-                const hasAdmin = usuarios.some(u => u.role === 'admin');
-                if (!hasAdmin) {
-                    role = 'admin';
-                }
-            }
-            
-            const nuevoUsuario = { nombre, pais, email, password, fecha: new Date().toLocaleDateString('es-MX'), role };
-            usuarios.push(nuevoUsuario);
-            localStorage.setItem('usuarios', JSON.stringify(usuarios));
-            console.log('Registration - User saved:', nuevoUsuario.email, 'Role:', role, 'Total users:', usuarios.length);
-            
-            if (typeof window.db !== 'undefined') {
-                window.db.collection('usuarios').add({
-                    nombre: nombre,
-                    pais: pais,
-                    email: email,
-                    password: password,
-                    fecha: new Date().toISOString(),
-                    role: role
-                }).then(() => {
-                    console.log('Usuario guardado en Firebase');
-                }).catch((error) => {
-                    console.log('Error en Firebase:', error);
+            firebase.auth().createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    let role = 'usuario';
+                    const adminCheckbox = document.getElementById('registerAsAdmin');
+                    if (adminCheckbox && adminCheckbox.checked) {
+                        db.collection('perfiles').where('role', '==', 'admin').get()
+                            .then(snapshot => {
+                                if (snapshot.empty) role = 'admin';
+                                saveProfileAndLogin(user, nombre, pais, email, role, messageEl);
+                            })
+                            .catch(() => saveProfileAndLogin(user, nombre, pais, email, role, messageEl));
+                    } else {
+                        saveProfileAndLogin(user, nombre, pais, email, role, messageEl);
+                    }
+                })
+                .catch((error) => {
+                    let msg = 'Error al crear cuenta';
+                    if (error.code === 'auth/email-already-in-use') {
+                        msg = 'Este correo ya está registrado';
+                    } else if (error.code === 'auth/weak-password') {
+                        msg = 'La contraseña debe tener al menos 6 caracteres';
+                    } else if (error.code === 'auth/invalid-email') {
+                        msg = 'El correo electrónico no es válido';
+                    }
+                    messageEl.className = 'cuenta-message error';
+                    messageEl.textContent = msg;
                 });
-            }
-            
-            localStorage.setItem('usuarioActual', JSON.stringify({ nombre, pais, email, role }));
-            messageEl.className = 'cuenta-message success';
-            messageEl.textContent = '¡Cuenta creada exitosamente!';
-            renderNav();
-            setTimeout(() => {
-                showSection('mi-cuenta');
-                cargarPrediccionesMiCuenta();
-            }, 1500);
         });
     }
     
     const adminCheckbox = document.getElementById('registerAsAdmin');
     if (adminCheckbox) {
-        const usuarios = JSON.parse(localStorage.getItem('usuarios') || '[]');
-        const hasAdmin = usuarios.some(u => u.role === 'admin');
-        adminCheckbox.parentElement.style.display = hasAdmin ? 'none' : 'block';
+        db.collection('perfiles').where('role', '==', 'admin').get()
+            .then(snapshot => {
+                adminCheckbox.parentElement.style.display = snapshot.empty ? 'block' : 'none';
+            })
+            .catch(() => {
+                adminCheckbox.parentElement.style.display = 'none';
+            });
     }
     
     const loginForm = document.getElementById('loginForm');
@@ -1836,76 +1868,124 @@ function loadQuinielaFromStorage() {
             const email = emailInput.value.trim().toLowerCase();
             const password = passwordInput.value;
             
-            // Verificar en localStorage (por email o por nombre)
-            const usuarios = JSON.parse(localStorage.getItem('usuarios') || '[]');
-            console.log('Login attempt:', { email, password, usuariosCount: usuarios.length });
+            messageEl.className = 'cuenta-message';
+            messageEl.textContent = 'Iniciando sesión...';
             
-            let usuario = usuarios.find(u => {
-                const emailMatch = u.email && u.email.trim().toLowerCase() === email;
-                const nombreMatch = u.nombre && u.nombre.toLowerCase() === email.toLowerCase();
-                console.log('Checking user:', u.email, 'Email match:', emailMatch, 'Nombre match:', nombreMatch);
-                return emailMatch || nombreMatch;
-            });
-            
-            // Verificar contraseña
-            if (usuario && usuario.password !== password) {
-                console.log('Password mismatch. Stored:', usuario.password, 'Entered:', password);
-                usuario = null;
-            }
-            
-            if (usuario) {
-                console.log('Login successful for:', usuario.email);
-                loginSuccess(usuario, messageEl);
-                return;
-            }
-            
-            // Si no se encuentra en localStorage, verificar en Firebase
-            if (typeof window.db !== 'undefined') {
-                // Buscar por email primero
-                window.db.collection('usuarios').where('email', '==', email).get()
-                    .then(snapshot => {
-                        if (snapshot.empty) {
-                            // Intentar buscar por nombre
-                            return window.db.collection('usuarios').where('nombre', '==', email).get();
-                        }
-                        return snapshot;
-                    })
-                    .then(snapshot => {
-                        if (!snapshot.empty) {
-                             snapshot.forEach(doc => {
-                                 const data = doc.data();
-                                 if (data.password === password) {
-                                     usuario = { nombre: data.nombre, email: data.email, pais: data.pais, role: data.role || 'usuario' };
-                                     usuarios.push({ nombre: data.nombre, pais: data.pais, email: data.email, password: data.password, role: data.role || 'usuario' });
-                                     localStorage.setItem('usuarios', JSON.stringify(usuarios));
-                                     loginSuccess(usuario, messageEl);
-                                 }
-                             });
-                        }
-                        if (!usuario) {
-                            loginError(messageEl, emailInput, passwordInput);
-                        }
-                    })
-                    .catch(e => {
-                        console.log('Error verificando en Firebase:', e);
-                        loginError(messageEl, emailInput, passwordInput);
-                    });
-                return;
-            }
-            
-            if (!usuario) {
-                loginError(messageEl, emailInput, passwordInput);
-            }
+            firebase.auth().signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const fbUser = userCredential.user;
+                    return db.collection('perfiles').doc(fbUser.uid).get()
+                        .then(doc => ({ fbUser, doc }));
+                })
+                .then(({ fbUser, doc }) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        loginSuccess({
+                            uid: fbUser.uid,
+                            nombre: data.nombre,
+                            email: data.email,
+                            pais: data.pais || '',
+                            role: data.role || 'usuario',
+                            foto: data.foto || ''
+                        }, messageEl);
+                    } else {
+                        loginSuccess({
+                            uid: fbUser.uid,
+                            nombre: email.split('@')[0],
+                            email: email,
+                            pais: '',
+                            role: 'usuario',
+                            foto: ''
+                        }, messageEl);
+                    }
+                })
+                .catch((error) => {
+                    // Fallback: buscar en localStorage (usuarios previos)
+                    const usuarios = JSON.parse(localStorage.getItem('usuarios') || '[]');
+                    const usuario = usuarios.find(u =>
+                        (u.email || '').toLowerCase() === email && u.password === password
+                    );
+                    
+                    if (usuario) {
+                        // Migrar a Firebase Auth
+                        firebase.auth().createUserWithEmailAndPassword(email, password)
+                            .then((cred) => {
+                                return db.collection('perfiles').doc(cred.user.uid).set({
+                                    nombre: usuario.nombre,
+                                    pais: usuario.pais || '',
+                                    email: usuario.email,
+                                    role: usuario.role || 'usuario',
+                                    fecha: new Date().toISOString()
+                                });
+                            })
+                            .then(() => {
+                                const currentUser = firebase.auth().currentUser;
+                                if (currentUser) {
+                                    loginSuccess({
+                                        uid: currentUser.uid,
+                                        nombre: usuario.nombre,
+                                        email: usuario.email,
+                                        pais: usuario.pais || '',
+                                        role: usuario.role || 'usuario'
+                                    }, messageEl);
+                                }
+                            })
+                            .catch(() => {
+                                // Si falla migración, igual inicia sesión con cache
+                                loginSuccess(Object.assign({}, usuario, { _localOnly: true }), messageEl);
+                            });
+                    } else {
+                        let msg = 'Email o contraseña incorrectos';
+                        if (error.code === 'auth/user-not-found') msg = 'No existe cuenta con este correo';
+                        else if (error.code === 'auth/wrong-password') msg = 'Contraseña incorrecta';
+                        else if (error.code === 'auth/invalid-email') msg = 'Correo electrónico no válido';
+                        else if (error.code === 'auth/too-many-requests') msg = 'Demasiados intentos. Intenta más tarde';
+                        loginError(messageEl, emailInput, passwordInput, msg);
+                    }
+                });
         });
     }
 }
 
+function saveProfileAndLogin(user, nombre, pais, email, role, messageEl) {
+    db.collection('perfiles').doc(user.uid).set({
+        nombre: nombre,
+        pais: pais,
+        email: email,
+        role: role,
+        fecha: new Date().toISOString()
+    })
+    .then(() => {
+        localStorage.setItem('usuarioActual', JSON.stringify({
+            uid: user.uid, nombre, pais, email, role
+        }));
+        messageEl.className = 'cuenta-message success';
+        messageEl.textContent = '¡Cuenta creada exitosamente!';
+        renderNav();
+        setTimeout(() => {
+            showSection('mi-cuenta');
+            cargarPrediccionesMiCuenta();
+        }, 1500);
+    })
+    .catch(() => {
+        localStorage.setItem('usuarioActual', JSON.stringify({
+            uid: user.uid, nombre, pais, email, role
+        }));
+        messageEl.className = 'cuenta-message success';
+        messageEl.textContent = '¡Cuenta creada!';
+        renderNav();
+        setTimeout(() => showSection('mi-cuenta'), 1500);
+    });
+}
+
 function loginSuccess(usuario, messageEl) {
     localStorage.setItem('usuarioActual', JSON.stringify({ 
+        uid: usuario.uid || '',
         nombre: usuario.nombre, 
         email: usuario.email,
         pais: usuario.pais || '',
-        role: usuario.role || 'usuario'
+        role: usuario.role || 'usuario',
+        foto: usuario.foto || ''
     }));
     renderNav();
     mostrarMiCuenta(usuario.nombre, usuario.email);
@@ -1916,9 +1996,11 @@ function loginSuccess(usuario, messageEl) {
     }, 1000);
 }
 
-function loginError(messageEl, emailInput, passwordInput) {
+function loginError(messageEl, emailInput, passwordInput, customMsg) {
     messageEl.className = 'cuenta-message error';
-    messageEl.innerHTML = '<span style="font-size:1.2em;">⚠️</span> Email o contraseña incorrectos<br><span style="font-size:0.85em;opacity:0.8;">Intenta de nuevo o crea una cuenta</span>';
+    messageEl.innerHTML = customMsg
+        ? '<span style="font-size:1.2em;">⚠️</span> ' + customMsg
+        : '<span style="font-size:1.2em;">⚠️</span> Email o contraseña incorrectos<br><span style="font-size:0.85em;opacity:0.8;">Intenta de nuevo o crea una cuenta</span>';
     
     if (emailInput) {
         emailInput.style.borderColor = '#ff4757';
@@ -1954,6 +2036,7 @@ function cerrarSesion() {
     if (!confirm('¿Estás seguro de que quieres cerrar sesión?')) {
         return;
     }
+    firebase.auth().signOut().catch(e => console.log('Error:', e));
     localStorage.removeItem('usuarioActual');
     const navMiCuenta = document.getElementById('navMiCuenta');
     const navAdmin = document.getElementById('navAdmin');
@@ -2161,14 +2244,9 @@ function cambiarFotoPerfil(input) {
                 document.getElementById('defaultAvatarIcon').style.display = 'none';
             }
             
-            if (typeof window.db !== 'undefined' && usuario.email) {
-                window.db.collection('usuarios').where('email', '==', usuario.email).get()
-                .then(snapshot => {
-                    if (!snapshot.empty) {
-                        return window.db.collection('usuarios').doc(snapshot.docs[0].id).update({ foto: fotoData });
-                    }
-                })
-                .catch(e => console.log('Error guardando foto:', e));
+            if (typeof db !== 'undefined' && usuario.uid) {
+                db.collection('perfiles').doc(usuario.uid).update({ foto: fotoData })
+                    .catch(e => console.log('Error guardando foto:', e));
             }
         };
         reader.readAsDataURL(input.files[0]);
@@ -2202,29 +2280,25 @@ function guardarCambiosPerfil() {
     }
     localStorage.setItem('usuarioActual', JSON.stringify(usuario));
     
-    const usuarios = getUsuarios();
-    const idx = usuarios.findIndex(u => u.email === usuario.email);
-    if (idx !== -1) {
-        usuarios[idx].nombre = nombre;
-        if (nuevaPassword) usuarios[idx].password = nuevaPassword;
-        saveUsuarios(usuarios);
+    const user = firebase.auth().currentUser;
+    if (!user) {
+        mensaje.className = 'cuenta-message error';
+        mensaje.textContent = 'Debes iniciar sesión para editar tu perfil';
+        return;
     }
     
-    if (typeof window.db !== 'undefined' && usuario.email) {
-        window.db.collection('usuarios').where('email', '==', usuario.email).get()
-        .then(snapshot => {
-            if (!snapshot.empty) {
-                const userDoc = snapshot.docs[0];
-                const updates = { nombre: nombre };
-                if (fotoPerfil && fotoPerfil !== '') {
-                    updates.foto = fotoPerfil;
-                }
-                if (nuevaPassword) {
-                    updates.password = nuevaPassword;
-                }
-                return window.db.collection('usuarios').doc(userDoc.id).update(updates);
-            }
-        })
+    const updates = { nombre: nombre };
+    if (fotoPerfil && fotoPerfil !== '') {
+        updates.foto = fotoPerfil;
+    }
+    
+    let passwordPromise = Promise.resolve();
+    if (nuevaPassword) {
+        passwordPromise = user.updatePassword(nuevaPassword);
+    }
+    
+    passwordPromise
+        .then(() => db.collection('perfiles').doc(user.uid).update(updates))
         .then(() => {
             mensaje.className = 'cuenta-message success';
             mensaje.textContent = 'Perfil actualizado correctamente';
@@ -2238,18 +2312,10 @@ function guardarCambiosPerfil() {
         .catch(e => {
             console.log('Error:', e);
             mensaje.className = 'cuenta-message error';
-            mensaje.textContent = 'Error al guardar. Intenta de nuevo.';
+            mensaje.textContent = e.code === 'auth/requires-recent-login'
+                ? 'Por seguridad, vuelve a iniciar sesión antes de cambiar tu contraseña'
+                : 'Error al guardar. Intenta de nuevo.';
         });
-    } else {
-        mensaje.className = 'cuenta-message success';
-        mensaje.textContent = 'Perfil actualizado correctamente';
-        if (document.getElementById('profileName')) {
-            document.getElementById('profileName').textContent = nombre;
-        }
-        document.getElementById('editarPassword').value = '';
-        document.getElementById('confirmarEditarPassword').value = '';
-        setTimeout(() => cerrarModalPerfil(), 1500);
-    }
 }
 
 function togglePaisDropdown() {
@@ -4026,96 +4092,109 @@ function showAdminTab(tab) {
     document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
     
-    event.target.classList.add('active');
+    const tabMap = { usuarios: 0, partidos: 1, predicciones: 2 };
+    const tabs = document.querySelectorAll('.admin-tab');
+    if (tabs[tabMap[tab]]) tabs[tabMap[tab]].classList.add('active');
     
-    if (tab === 'usuarios') {
-        document.getElementById('adminUsuarios').classList.add('active');
-        renderAdminUsuarios();
-    } else if (tab === 'partidos') {
-        document.getElementById('adminPartidos').classList.add('active');
-        renderAdminPartidos();
-    } else if (tab === 'predicciones') {
-        document.getElementById('adminPredicciones').classList.add('active');
-        renderAdminPredicciones();
-    }
+    const panelId = 'admin' + tab.charAt(0).toUpperCase() + tab.slice(1);
+    const panel = document.getElementById(panelId);
+    if (panel) panel.classList.add('active');
+    
+    if (tab === 'usuarios') renderAdminUsuarios();
+    else if (tab === 'partidos') renderAdminPartidos();
+    else if (tab === 'predicciones') renderAdminPredicciones();
 }
 
 function renderAdminUsuarios() {
     const tbody = document.querySelector('#adminUsuariosTable tbody');
     if (!tbody) return;
     
-    const usuarios = getUsuarios();
     const currentUser = getCurrentUser();
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#64748b;">Cargando usuarios...</td></tr>';
     
-    tbody.innerHTML = usuarios.map((u, i) => `
-        <tr>
-            <td>${u.nombre}</td>
-            <td>${u.email}</td>
-            <td>${u.pais || '-'}</td>
-            <td><span class="role-badge ${u.role || 'usuario'}">${u.role === 'admin' ? '👑 Admin' : '👤 Usuario'}</span></td>
-            <td>${u.fecha || '-'}</td>
-            <td class="admin-actions-cell">
-                ${u.email !== currentUser.email ? `
-                    ${u.role === 'admin' 
-                        ? `<button class="btn-admin-action degrade" onclick="cambiarRol('${u.email}', 'usuario')">Degradar</button>`
-                        : `<button class="btn-admin-action promote" onclick="cambiarRol('${u.email}', 'admin')">Promover</button>`
-                    }
-                    <button class="btn-admin-action delete" onclick="eliminarUsuario('${u.email}')">Eliminar</button>
-                ` : '<span class="current-user-badge">Tú</span>'}
-            </td>
-        </tr>
-    `).join('');
+    db.collection('perfiles').get()
+        .then(snapshot => {
+            const usuarios = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                usuarios.push({ uid: doc.id, ...data });
+            });
+            
+            tbody.innerHTML = usuarios.map(u => `
+                <tr>
+                    <td>${u.nombre || 'Sin nombre'}</td>
+                    <td>${u.email}</td>
+                    <td>${u.pais || '-'}</td>
+                    <td><span class="role-badge ${u.role || 'usuario'}">${u.role === 'admin' ? '👑 Admin' : '👤 Usuario'}</span></td>
+                    <td>${u.fecha ? new Date(u.fecha).toLocaleDateString('es-MX') : '-'}</td>
+                    <td class="admin-actions-cell">
+                        ${u.email !== currentUser.email ? `
+                            ${u.role === 'admin' 
+                                ? `<button class="btn-admin-action degrade" onclick="cambiarRol('${u.uid}','${u.email}', 'usuario')">Degradar</button>`
+                                : `<button class="btn-admin-action promote" onclick="cambiarRol('${u.uid}','${u.email}', 'admin')">Promover</button>`
+                            }
+                            <button class="btn-admin-action delete" onclick="eliminarUsuario('${u.uid}','${u.email}')">Eliminar</button>
+                        ` : '<span class="current-user-badge">Tú</span>'}
+                    </td>
+                </tr>
+            `).join('');
+        })
+        .catch(e => {
+            console.log('Error cargando usuarios:', e);
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#ff4757;">Error al cargar usuarios</td></tr>';
+        });
 }
 
-function cambiarRol(email, nuevoRol) {
+function cambiarRol(uid, email, nuevoRol) {
     if (!confirm(`¿Cambiar el rol de este usuario a ${nuevoRol === 'admin' ? 'Administrador' : 'Usuario'}?`)) return;
     
-    const usuarios = getUsuarios();
-    const usuario = usuarios.find(u => u.email === email);
-    if (usuario) {
-        usuario.role = nuevoRol;
-        saveUsuarios(usuarios);
-        
-        if (typeof window.db !== 'undefined') {
-            window.db.collection('usuarios').where('email', '==', email).get().then(snapshot => {
-                snapshot.forEach(doc => {
-                    window.db.collection('usuarios').doc(doc.id).update({ role: nuevoRol });
-                });
-            });
-        }
-        
-        renderAdminUsuarios();
-    }
+    db.collection('perfiles').doc(uid).update({ role: nuevoRol })
+        .then(() => {
+            const usuarios = getUsuarios();
+            const localUser = usuarios.find(u => u.email === email);
+            if (localUser) {
+                localUser.role = nuevoRol;
+                saveUsuarios(usuarios);
+            }
+            renderAdminUsuarios();
+        })
+        .catch(e => {
+            console.log('Error cambiando rol:', e);
+            alert('Error al cambiar el rol. Intenta de nuevo.');
+        });
 }
 
-function eliminarUsuario(email) {
+function eliminarUsuario(uid, email) {
     if (!confirm('¿Eliminar este usuario? Esta acción no se puede deshacer.')) return;
     
-    let usuarios = getUsuarios();
-    usuarios = usuarios.filter(u => (u.email || '').toLowerCase() !== email.toLowerCase());
-    saveUsuarios(usuarios);
-    
-    localStorage.removeItem('panini_' + email);
-    
-    if (typeof window.db !== 'undefined') {
-        window.db.collection('usuarios').where('email', '==', email).get().then(snapshot => {
-            const batch = window.db.batch();
-            snapshot.forEach(doc => batch.delete(doc.ref));
-            batch.commit();
-        });
-        window.db.collection('predicciones').where('email', '==', email).get().then(snapshot => {
-            const batch = window.db.batch();
-            snapshot.forEach(doc => batch.delete(doc.ref));
-            batch.commit();
-        });
-        window.db.collection('panini').where('email', '==', email).get().then(snapshot => {
-            const batch = window.db.batch();
-            snapshot.forEach(doc => batch.delete(doc.ref));
-            batch.commit();
-        });
-    }
-    
-    renderAdminUsuarios();
+    // Limpiar datos en Firestore
+    Promise.all([
+        db.collection('perfiles').doc(uid).delete(),
+        db.collection('predicciones').where('email', '==', email).get()
+            .then(snapshot => {
+                const batch = db.batch();
+                snapshot.forEach(doc => batch.delete(doc.ref));
+                return batch.commit();
+            }),
+        db.collection('panini').where('email', '==', email).get()
+            .then(snapshot => {
+                const batch = db.batch();
+                snapshot.forEach(doc => batch.delete(doc.ref));
+                return batch.commit();
+            })
+    ])
+    .then(() => {
+        let usuarios = getUsuarios();
+        usuarios = usuarios.filter(u => (u.email || '').toLowerCase() !== email.toLowerCase());
+        saveUsuarios(usuarios);
+        localStorage.removeItem('panini_' + email);
+        renderAdminUsuarios();
+        alert('Usuario eliminado correctamente. La cuenta de Firebase Auth debe eliminarse desde la consola de Firebase (Authentication > Users).');
+    })
+    .catch(e => {
+        console.log('Error eliminando usuario:', e);
+        alert('Error al eliminar usuario. Intenta de nuevo.');
+    });
 }
 
 function renderAdminPartidos() {
@@ -4226,5 +4305,17 @@ window.cerrarSesion = cerrarSesion;
 
 
 function recuperarContrasena() {
-    alert('功能开发中...\n\nPronto estará disponible la opción de recuperación de contraseña.');
+    const email = prompt('Ingresa tu correo electrónico para recuperar tu contraseña:');
+    if (!email) return;
+    
+    firebase.auth().sendPasswordResetEmail(email.trim())
+        .then(() => {
+            alert('Se ha enviado un correo de recuperación a ' + email.trim() + '. Revisa tu bandeja de entrada.');
+        })
+        .catch((error) => {
+            let msg = 'Error al enviar el correo de recuperación';
+            if (error.code === 'auth/user-not-found') msg = 'No existe una cuenta con este correo';
+            else if (error.code === 'auth/invalid-email') msg = 'Correo electrónico no válido';
+            alert(msg);
+        });
 }
