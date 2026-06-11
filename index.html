@@ -1,0 +1,866 @@
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FIFA World Cup 2026 - México, Estados Unidos y Canadá</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js"></script>
+</head>
+<body>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            function navigateTo(targetId) {
+                document.querySelectorAll('section.section').forEach(s => {
+                    s.classList.remove('active');
+                });
+                const target = document.getElementById(targetId);
+                if (target) {
+                    target.classList.add('active');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+                document.querySelectorAll('header nav a').forEach(a => {
+                    a.style.color = '#666680';
+                    a.style.borderBottom = 'none';
+                    if (a.getAttribute('href') === '#' + targetId) {
+                        a.style.color = '#d4af37';
+                        a.style.borderBottom = '2px solid #d4af37';
+                        a.style.paddingBottom = '4px';
+                    }
+                });
+                if (targetId === 'mi-cuenta' && typeof cargarPrediccionesMiCuenta === 'function') {
+                    cargarPrediccionesMiCuenta();
+                }
+                if (targetId === 'admin' && typeof showSection === 'function') {
+                    showSection('admin');
+                    return;
+                }
+            }
+            window.navigateTo = navigateTo;
+            
+            document.querySelectorAll('nav a[href^="#"]').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href').substring(1);
+                    navigateTo(targetId);
+                });
+            });
+            
+            document.querySelectorAll('header > a[href="#inicio"]').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    navigateTo('inicio');
+                });
+            });
+        });
+    </script>
+    <header style="display: flex; flex-direction: row; align-items: center; padding: 10px 20px; gap: 30px; width: 100%; background: rgba(255,255,255,0.98); border-bottom: 1px solid #e0e0e0; position: sticky; top: 0; z-index: 1000;">
+        <a href="#inicio"><img src="assets/logo.png" style="height: 50px; width: auto;"></a>
+        <a href="#inicio"><img src="assets/fifa-logo.png" style="height: 40px; width: auto;"></a>
+        <nav style="display: flex; flex-direction: row; align-items: center; gap: 20px; flex-wrap: wrap;">
+            <a href="#inicio" style="color: #d4af37; font-weight: 700; text-decoration: none;">Inicio</a>
+            <a href="#sedes" style="color: #666680; text-decoration: none;">Sedes</a>
+            <a href="#equipos" style="color: #666680; text-decoration: none;">Equipos</a>
+            <a href="#partidos" style="color: #666680; text-decoration: none;">Partidos</a>
+            <a href="#calendario" style="color: #666680; text-decoration: none;">Calendario</a>
+            <a href="#quiniela" style="color: #666680; text-decoration: none;">Predicciones</a>
+            <a href="#historia" style="color: #666680; text-decoration: none;">Historia</a>
+            <a href="#mi-panini" style="color: #666680; text-decoration: none;">Mi Panini</a>
+            <a href="#crear-cuenta" style="color: #666680; text-decoration: none;">Crear Cuenta</a>
+            <a href="#iniciar-sesion" style="color: #666680; text-decoration: none;">Iniciar Sesión</a>
+            <a href="#mi-cuenta" id="navMiCuenta" style="display:none; color: #666680; text-decoration: none;">Mi Cuenta</a>
+            <a href="#admin" id="navAdmin" style="display:none; color: #666680; text-decoration: none;">⚙️ Admin</a>
+        </nav>
+    </header>
+    <section class="section active" id="inicio">
+        <div class="hero-bg">
+            <video autoplay muted loop playsinline>
+                <source src="assets/video.mp4" type="video/mp4">
+            </video>
+            <div class="hero-overlay"></div>
+        </div>
+        
+        <div class="hero-content">
+            <h1 class="hero-title">FIFA World Cup 2026</h1>
+            
+            <p class="hero-slogan">48 naciones. 104 partidos. Un solo campeón.</p>
+            
+            <div class="countdown-container">
+                <div class="countdown-item">
+                    <div class="countdown-value" id="countdownDays">0</div>
+                    <div class="countdown-label">Días</div>
+                </div>
+                <div class="countdown-separator">:</div>
+                <div class="countdown-item">
+                    <div class="countdown-value" id="countdownHours">0</div>
+                    <div class="countdown-label">Horas</div>
+                </div>
+                <div class="countdown-separator">:</div>
+                <div class="countdown-item">
+                    <div class="countdown-value" id="countdownMinutes">0</div>
+                    <div class="countdown-label">Min</div>
+                </div>
+                <div class="countdown-separator">:</div>
+                <div class="countdown-item">
+                    <div class="countdown-value" id="countdownSeconds">0</div>
+                    <div class="countdown-label">Seg</div>
+                </div>
+            </div>
+            
+            <div class="paises-anfitriones">
+                <div class="pais-item">
+                    <img src="flags/mx.png" alt="México">
+                    <span>México</span>
+                </div>
+                <div class="pais-divider"></div>
+                <div class="pais-item">
+                    <img src="flags/us.png" alt="Estados Unidos">
+                    <span>Estados Unidos</span>
+                </div>
+                <div class="pais-divider"></div>
+                <div class="pais-item">
+                    <img src="flags/ca.png" alt="Canadá">
+                    <span>Canadá</span>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section class="section" id="sedes">
+        <div class="section-header">
+            <h2>Sedes</h2>
+            <p>16 ciudades sede en 3 países</p>
+        </div>
+        <div class="venues-grid" id="venuesGrid"></div>
+    </section>
+    
+    <section class="section" id="equipos">
+        <div class="section-header">
+            <h2>Equipos</h2>
+            <p>48 selecciones clasificadas</p>
+        </div>
+        <div class="groups-grid" id="groupsGrid"></div>
+    </section>
+    
+    <section class="section" id="partidos">
+        <div class="section-header">
+            <h2>Partidos</h2>
+            <p>Todos los partidos del mundial</p>
+        </div>
+        <div id="matchList">
+        <div class="match-filter-container" style="margin-bottom:20px;">
+            <label for="groupFilter" style="color:#f0c040;font-weight:600;margin-right:10px;">Filtrar por fase:</label>
+            <select id="groupFilter" style="background:#0f172a;color:#ffffff;padding:10px 20px;border:2px solid #f0c040;border-radius:8px;font-size:1rem;cursor:pointer;">
+                <option value="all">Todos los partidos</option>
+            </select>
+        </div>
+    </div>
+    </section>
+    
+    <section class="section" id="calendario">
+        <div class="section-header">
+            <h2>Calendario</h2>
+            <p>Horario de partidos</p>
+        </div>
+        <div class="calendar-wrapper">
+            <div class="calendar-container" id="calendarGrid"></div>
+        </div>
+    </section>
+    
+    <section class="section" id="quiniela">
+        <div class="section-header">
+            <h2>Predicciones</h2>
+            <p>Pronostica los resultados</p>
+        </div>
+        <div class="quiniela-container">
+            <div class="quiniela-actions">
+                <button class="btn-quiniela-save" id="saveQuiniela">💾 Guardar Predicciones</button>
+                <button class="btn-quiniela-clear" id="clearQuiniela">🗑️ Limpiar</button>
+            </div>
+            <div class="quiniela-matches" id="quinielaMatches"></div>
+            <div class="quiniela-summary">
+                <h3>Resumen de Predicciones</h3>
+                <div class="summary-stats">
+                    <div class="summary-stat">
+                        <span class="stat-value" id="predictedWins">0</span>
+                        <span class="stat-label">Predichas</span>
+                    </div>
+                    <div class="summary-stat">
+                        <span class="stat-value" id="predictedDraws">0</span>
+                        <span class="stat-label">Total Partidos</span>
+                    </div>
+                    <div class="summary-stat">
+                        <span class="stat-value" id="predictedLosses">0%</span>
+                        <span class="stat-label">Completado</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section class="section" id="historia">
+    <div class="section-header">
+        <h2>Historia de los Mundiales</h2>
+        <p>Más de un siglo de pasión por el fútbol</p>
+    </div>
+    <div class="historia-intro">
+        <p>La Copa Mundial de la FIFA es el torneo de fútbol más grande del mundo, donde las mejores selecciones nacionales compiten por el título más codiciado del deporte rey. Desde la primera edición en 1930 hasta nuestros días, el torneo ha evolucionado hasta convertirse en un evento global que trasciende fronteras y culturas.</p>
+    </div>
+    <div class="timeline">
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">1930</div>
+                <h3>Uruguay 1930</h3>
+                <p>Primera edición del campeonato. 13 equipos participaron en Uruguay. La selección local se coronó campeona tras vencer a Argentina 4-2 en la final.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/1930.jpg" alt="Mundial 1930">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">1934</div>
+                <h3>Italia 1934</h3>
+                <p>Italia organizadora y campeona. Primer mundial con formato de eliminatorias directas. 16 selecciones inscribieron.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/1934.webp" alt="Mundial 1934">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">1938</div>
+                <h3>Francia 1938</h3>
+                <p>Italia ganó su segundo título consecutivo. Único mundial antes de la Segunda Guerra Mundial. 15 países participaron.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/1938.webp" alt="Mundial 1938">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">1950</div>
+                <h3>Brasil 1950</h3>
+                <p>Tras 12 años de pausa por la guerra. Uruguay venció a Brasil 2-1 en el Maracanazo, una de las mayores sorpresas de la historia.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/1950.webp" alt="Mundial 1950">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">1954</div>
+                <h3>Suiza 1954</h3>
+                <p>Hungría llegó como gran favorita pero Alemania Occidental dio la sorpresa. Partido final conocido como El Milagro de Berna.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/1954.webp" alt="Mundial 1954">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">1958</div>
+                <h3>Suecia 1958</h3>
+                <p>Brasil ganó su primera Copa con un joven Pelé de 17 años. Debutó la Unión Soviética.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/1958.jpg" alt="Mundial 1958">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">1962</div>
+                <h3>Chile 1962</h3>
+                <p>Brasil defendió el título. Garrincha brilló como figura. Chile acogió un torneo marcado por la dureza en las canchas.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/1962.webp" alt="Mundial 1962">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">1966</div>
+                <h3>Inglaterra 1966</h3>
+                <p>Inglaterra ganó su único título en casa. Portugal llegó tercero con Eusébio como goleador. Hat-trick de Geoff Hurst en la final.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/1966.webp" alt="Mundial 1966">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">1970</div>
+                <h3>México 1970</h3>
+                <p>Brasil ganó su tercera Copa y se quedó con el Trofeo Jules Rimet de forma permanente. Pelé fue incluido en el Equipo de las Estrellas.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/1970.webp" alt="Mundial 1970">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">1974</div>
+                <h3>Alemania 1974</h3>
+                <p>Alemania Occidental ganó en casa. Primer mundial con el Telstar, balón oficial. Johan Cruyff fue la figura.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/1974.jpg" alt="Mundial 1974">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">1978</div>
+                <h3>Argentina 1978</h3>
+                <p>Argentina ganó en casa con Mario Kempes como goleador. El torneo estuvo marcado por controversias políticas.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/1978.webp" alt="Mundial 1978">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">1982</div>
+                <h3>España 1982</h3>
+                <p>Italia ganó su tercer título. 24 equipos participaron por primera vez. Paolo Rossi fue el goleador del torneo.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/1982.webp" alt="Mundial 1982">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">1986</div>
+                <h3>México 1986</h3>
+                <p>Argentina de Maradona ganó la Copa. El Gol de la Mano de Dios y la mejor goleada de la historia: Inglaterra 1-2.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/1986.webp" alt="Mundial 1986">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">1990</div>
+                <h3>Italia 1990</h3>
+                <p>Alemania unificó el país ganando el torneo. Camerún fue la sorpresa como primer equipo africano en semifinales.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/1990.jpg" alt="Mundial 1990">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">1994</div>
+                <h3>Estados Unidos 1994</h3>
+                <p>Brasil ganó su cuarta Copa en penaltis contra Italia. Primer partido en definición por penales en una final.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/1994.webp" alt="Mundial 1994">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">1998</div>
+                <h3>Francia 1998</h3>
+                <p>Francia ganó su primera Copa en casa con Zinedine Zidane como héroe. 48 equipos fueron el récord de participación.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/1998.webp" alt="Mundial 1998">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">2002</div>
+                <h3>Corea del Sur y Japón 2002</h3>
+                <p>Primer mundial en Asia. Brasil ganó su quinta Copa con Ronaldo. Corea del Sur alcanzó semifinal sorpresivamente.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/2002.webp" alt="Mundial 2002">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">2006</div>
+                <h3>Alemania 2006</h3>
+                <p>Italia ganó su cuarto título en penaltis contra Francia. Zinedine Zidane se despidió con un cabezazo legendario.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/2006.webp" alt="Mundial 2006">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">2010</div>
+                <h3>Sudáfrica 2010</h3>
+                <p>España ganó su primera Copa con Iniesta como héroe. Primera edición en África. El pulpo Paul predijo los resultados.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/2010.webp" alt="Mundial 2010">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">2014</div>
+                <h3>Brasil 2014</h3>
+                <p>Alemania ganó su cuarto título goleando 7-1 a Brasil en semifinal. Mario Götze marcó el gol de la final.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/2014.webp" alt="Mundial 2014">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">2018</div>
+                <h3>Rusia 2018</h3>
+                <p>Francia ganó su segunda Copa con una generación dorada. Croacia llegó a su primera final de la mano de Luka Modric.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/2018.webp" alt="Mundial 2018">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">2022</div>
+                <h3>Catar 2022</h3>
+                <p>Argentina de Messi ganó su tercera Copa tras 36 años de espera. Final contra Francia considerada la mejor de la historia.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/2022.webp" alt="Mundial 2022">
+                </div>
+            </div>
+        </div>
+        <div class="timeline-item highlight">
+            <div class="timeline-content" onclick="toggleTimelineItem(this)">
+                <span class="timeline-arrow">▼</span>
+                <div class="timeline-year">2026</div>
+                <h3>Estados Unidos, México y Canadá 2026</h3>
+                <p>Primer mundial con 48 selecciones y 104 partidos. 16 ciudades sede en tres países. Una nueva era del fútbol global.</p>
+                <div class="timeline-image-container">
+                    <img src="assets/imagenes linea de tiempo/2026.webp" alt="Mundial 2026">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="champions-summary">
+        <h3>Palmarés de Copas Mundiales</h3>
+        <div class="champions-grid">
+            <div class="champion-stat">
+                <span class="champion-count">5</span>
+                <span class="champion-name">Brasil</span>
+                <span class="champion-years">1958, 1962, 1970, 1994, 2002</span>
+            </div>
+            <div class="champion-stat">
+                <span class="champion-count">4</span>
+                <span class="champion-name">Alemania</span>
+                <span class="champion-years">1954, 1974, 1990, 2014</span>
+            </div>
+            <div class="champion-stat">
+                <span class="champion-count">4</span>
+                <span class="champion-name">Italia</span>
+                <span class="champion-years">1934, 1938, 1982, 2006</span>
+            </div>
+            <div class="champion-stat">
+                <span class="champion-count">3</span>
+                <span class="champion-name">Argentina</span>
+                <span class="champion-years">1978, 1986, 2022</span>
+            </div>
+            <div class="champion-stat">
+                <span class="champion-count">2</span>
+                <span class="champion-name">Francia</span>
+                <span class="champion-years">1998, 2018</span>
+            </div>
+            <div class="champion-stat">
+                <span class="champion-count">2</span>
+                <span class="champion-name">Uruguay</span>
+                <span class="champion-years">1930, 1950</span>
+            </div>
+            <div class="champion-stat">
+                <span class="champion-count">1</span>
+                <span class="champion-name">España</span>
+                <span class="champion-years">2010</span>
+            </div>
+            <div class="champion-stat">
+                <span class="champion-count">1</span>
+                <span class="champion-name">Inglaterra</span>
+                <span class="champion-years">1966</span>
+            </div>
+        </div>
+    </div>
+</section>
+    
+    <section class="section" id="mi-panini">
+        <div class="section-header">
+            <h2>Mi Panini</h2>
+            <p>Colecciona y completa tu álbum de figuras del Mundial 2026</p>
+            <img src="assets/PANINI.png" alt="Panini" class="panini-section-logo" onerror="this.style.display='none'">
+        </div>
+        <div class="panini-container" id="paniniContainer">
+        <!-- Mensaje login (mostrar cuando no está logueado) -->
+        <div class="panini-login-required" id="paniniLoginMsg">
+            <div class="panini-warning-icon">🔒</div>
+            <h3 class="panini-warning-title">Acceso Restringido</h3>
+            <p class="panini-warning-text">Debes iniciar sesión para acceder a tu álbum Panini, completar tu colección y guardar tu progreso.</p>
+            <a href="#iniciar-sesion" class="panini-login-btn" onclick="event.preventDefault(); navigateTo('iniciar-sesion');">Iniciar Sesión</a>
+        </div>
+        
+        <!-- Álbum interactivo (oculto por defecto) -->
+        <div class="panini-album" id="paniniAlbum" style="display:none;">
+            <!-- Barra de progreso -->
+            <div class="panini-progress-bar">
+                <div class="panini-progress-info">
+                    <span id="paniniCount">0</span> / <span id="paniniTotal">980</span> láminas
+                </div>
+                <div class="panini-progress-track">
+                    <div class="panini-progress-fill" id="paniniProgressFill"></div>
+                </div>
+                <div class="panini-progress-percent" id="paniniPercent">0%</div>
+            </div>
+        
+            <!-- Filtros -->
+            <div class="panini-filters">
+                <button class="panini-filter active" data-filter="all" onclick="filterPanini(this, 'all')">Todos</button>
+                <button class="panini-filter" data-filter="obtained" onclick="filterPanini(this, 'obtained')">Obtenidos</button>
+                <button class="panini-filter" data-filter="missing" onclick="filterPanini(this, 'missing')">Faltantes</button>
+                <select id="paniniGroupFilter" class="panini-group-select" onchange="filterPaniniByGroup(this.value)">
+                    <option value="all">Todos los grupos</option>
+                </select>
+            </div>
+        
+            <!-- Grid de equipos -->
+            <div class="panini-teams-grid" id="paniniTeamsGrid">
+                <!-- Generado dinámicamente -->
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="crear-cuenta">
+        <div class="section-header">
+            <h2>Crear Cuenta</h2>
+            <p>Regístrate para guardar tus predicciones</p>
+        </div>
+        <div class="cuenta-container" style="max-width:450px;background:#111827;border:1px solid #1e3a5f;border-radius:16px;padding:2rem;margin:0 auto;">
+            <form class="cuenta-form" id="registroForm">
+                <div class="form-group">
+                    <label for="nombre">Nombre</label>
+                    <input type="text" id="nombre" name="nombre" required placeholder="Tu nombre" style="background:#0a0f2c;border:1px solid #1e3a5f;color:#ffffff;padding:12px;border-radius:8px;width:100%;">
+                </div>
+                <div class="form-group" style="position:relative;">
+                    <label for="pais">País</label>
+                    <div id="paisSelector" onclick="togglePaisDropdown()" style="background:#0a0f2c;border:1px solid #1e3a5f;color:#ffffff;padding:12px;border-radius:8px;width:100%;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+                        <span id="paisSeleccionado" style="display:flex;align-items:center;gap:10px;">
+                            <span style="color:#64748b;">Selecciona tu país</span>
+                        </span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+                    <div id="paisDropdown" style="display:none;position:absolute;background:#0a0f2c;border:1px solid #f0c040;border-radius:8px;max-height:250px;overflow-y:auto;z-index:100;width:100%;margin-top:4px;box-shadow:0 4px 12px rgba(0,0,0,0.5);">
+                    </div>
+                    <input type="hidden" id="pais" name="pais" value="">
+                </div>
+                <div class="form-group">
+                    <label for="email">Correo Electrónico</label>
+                    <input type="email" id="email" name="email" required placeholder="correo@ejemplo.com" style="background:#0a0f2c;border:1px solid #1e3a5f;color:#ffffff;padding:12px;border-radius:8px;width:100%;">
+                </div>
+                <div class="form-group">
+                    <label for="password">Contraseña</label>
+                    <input type="password" id="password" name="password" required placeholder="Tu contraseña" style="background:#0a0f2c;border:1px solid #1e3a5f;color:#ffffff;padding:12px;border-radius:8px;width:100%;">
+                </div>
+                <div class="form-group">
+                    <label for="confirmarPassword">Confirmar Contraseña</label>
+                    <input type="password" id="confirmarPassword" name="confirmarPassword" required placeholder="Confirma tu contraseña" style="background:#0a0f2c;border:1px solid #1e3a5f;color:#ffffff;padding:12px;border-radius:8px;width:100%;">
+                </div>
+                <div class="form-group" id="adminRoleGroup" style="display:none;">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                        <input type="checkbox" id="registerAsAdmin" style="width:18px;height:18px;accent-color:#c9a84c;">
+                        <span style="color:#c9a84c;font-weight:600;font-size:0.9rem;">👑 Registrarme como Administrador</span>
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary" style="background:#f0c040;color:#0f172a;font-weight:700;padding:12px;border-radius:8px;border:none;cursor:pointer;width:100%;font-size:1rem;">Crear Cuenta</button>
+                <p style="color:#9ca3af;text-align:center;margin-top:15px;">¿Ya tienes cuenta? <a href="#" onclick="irAIniciarSesion()" style="color:#f0c040;">Iniciar sesión</a></p>
+            </form>
+            <div class="cuenta-message" id="cuentaMessage"></div>
+        </div>
+    </section>
+    
+    <section class="section" id="iniciar-sesion">
+        <div class="section-header">
+            <h2>Iniciar Sesión</h2>
+            <p>Ingresa tus datos para acceder</p>
+        </div>
+        <div class="cuenta-container" style="max-width:450px;background:#111827;border:1px solid #1e3a5f;border-radius:16px;padding:2rem;margin:0 auto;">
+            <form class="cuenta-form" id="loginForm">
+                <div class="form-group">
+                    <label for="loginEmail">Correo Electrónico</label>
+                    <input type="email" id="loginEmail" name="loginEmail" required placeholder="correo@ejemplo.com" style="background:#0a0f2c;border:1px solid #1e3a5f;color:#ffffff;padding:12px;border-radius:8px;width:100%;">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Contraseña</label>
+                    <input type="password" id="loginPassword" name="loginPassword" required placeholder="Tu contraseña" style="background:#0a0f2c;border:1px solid #1e3a5f;color:#ffffff;padding:12px;border-radius:8px;width:100%;">
+                </div>
+                <button type="submit" class="btn btn-primary" style="background:#f0c040;color:#0a0f2c;font-weight:700;padding:12px;border-radius:8px;border:none;cursor:pointer;width:100%;font-size:1rem;">Iniciar Sesión</button>
+                <p style="text-align:center;margin-top:15px;"><a href="#" onclick="recuperarContrasena(); return false;" style="color:#f0c040;font-size:0.9rem;">¿Olvidaste tu contraseña?</a></p>
+                <p style="color:#9ca3af;text-align:center;margin-top:15px;">¿No tienes cuenta? <a href="#" onclick="irACrearCuenta()" style="color:#f0c040;">Crear cuenta</a></p>
+            </form>
+            <div class="cuenta-message" id="loginMessage"></div>
+        </div>
+    </section>
+    
+    <div id="modalEditarPerfil" class="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);z-index:2000;align-items:center;justify-content:center;">
+        <div class="modal-editar-perfil" style="background:linear-gradient(145deg, rgba(17,24,39,0.98), rgba(10,14,26,0.99));border:1px solid rgba(201,168,76,0.25);border-radius:20px;padding:0;max-width:480px;width:92%;max-height:90vh;overflow-y:auto;position:relative;box-shadow:0 25px 60px rgba(0,0,0,0.5),0 0 40px rgba(201,168,76,0.08);">
+            <div class="modal-header-premium">
+                <div class="modal-title-wrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                    <h2>Editar Perfil</h2>
+                </div>
+                <button onclick="cerrarModalPerfil()" class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body-premium">
+                <form id="editarPerfilFormModal">
+                    <div class="modal-avatar-section">
+                        <div class="modal-avatar-ring">
+                            <div class="modal-avatar-glow"></div>
+                            <img id="previewAvatar" src="" class="modal-avatar-img" style="display:none;">
+                            <svg id="defaultAvatarIcon" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            <label for="modalCambiarFoto" class="modal-avatar-upload-label">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                            </label>
+                        </div>
+                        <input type="file" id="modalCambiarFoto" accept="image/*" style="display:none;" onchange="previewFotoPerfil(this)">
+                        <span class="avatar-hint">Clic en la imagen para cambiar foto</span>
+                    </div>
+                    <div class="modal-form-group">
+                        <label for="editarNombre">Nombre</label>
+                        <input type="text" id="editarNombre" required placeholder="Tu nombre completo">
+                    </div>
+                    <div class="modal-form-group">
+                        <label for="editarEmail">Correo Electrónico</label>
+                        <input type="email" id="editarEmail" disabled placeholder="correo@ejemplo.com">
+                    </div>
+                    <div class="modal-divider">
+                        <span>Seguridad</span>
+                    </div>
+                    <div class="modal-form-group">
+                        <label for="editarPassword">Nueva Contraseña</label>
+                        <input type="password" id="editarPassword" placeholder="Dejar vacío para no cambiar">
+                    </div>
+                    <div class="modal-form-group">
+                        <label for="confirmarEditarPassword">Confirmar Contraseña</label>
+                        <input type="password" id="confirmarEditarPassword" placeholder="Repite la nueva contraseña">
+                    </div>
+                    <div class="modal-form-actions">
+                        <button type="button" onclick="cerrarModalPerfil()" class="btn-modal-cancel">Cancelar</button>
+                        <button type="submit" class="btn-modal-save">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Guardar Cambios
+                        </button>
+                    </div>
+                    <div id="editarPerfilMessage" class="modal-message"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <section class="section" id="mi-cuenta">
+        <div class="cuenta-wrapper">
+            <div class="cuenta-layout">
+                <div class="cuenta-sidebar">
+                    <div class="profile-hero-card">
+                        <div class="profile-avatar-ring" onclick="document.getElementById('nuevaFotoPerfil').click()" style="cursor:pointer;position:relative;" title="Clic para cambiar foto">
+                            <div class="avatar-glow"></div>
+                            <div class="avatar-border"></div>
+                            <img id="profileAvatarImg" src="" class="profile-avatar-img" style="display:none;">
+                            <svg id="defaultProfileAvatar" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            <div class="avatar-camera-badge">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                            </div>
+                        </div>
+                        <input type="file" id="nuevaFotoPerfil" accept="image/*" style="display:none;" onchange="cambiarFotoPerfil(this)">
+                        <div class="profile-details">
+                            <div class="profile-name-row">
+                                <h2 id="profileName" class="cuenta-nombre">Cargando...</h2>
+                                <span id="profileRoleBadge" class="role-badge">
+                                    <svg class="role-badge-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+                                    <span id="profileRoleText">Usuario</span>
+                                </span>
+                            </div>
+                            <p id="profileEmail" class="cuenta-email">cargando@email.com</p>
+                        </div>
+                        <div class="profile-actions">
+                            <button type="button" class="btn-editar-perfil" onclick="abrirModalPerfil()">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                                Editar Perfil
+                            </button>
+                            <button type="button" class="btn-cerrar-sesion" onclick="cerrarSesion()">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                                Cerrar Sesión
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="cuenta-stats-grid">
+                        <div class="stat-card-premium">
+                            <div class="stat-icon-premium">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                            </div>
+                            <div class="stat-content-premium">
+                                <span class="stat-number" id="statPredicciones">0</span>
+                                <span class="stat-label">Predicciones</span>
+                            </div>
+                        </div>
+                        <div class="stat-card-premium">
+                            <div class="stat-icon-premium">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+                            </div>
+                            <div class="stat-content-premium">
+                                <span class="stat-number" id="statPartidos">0</span>
+                                <span class="stat-label">Partidos</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cuenta-main">
+                    <div class="cuenta-predicciones-section">
+                        <div class="section-title-bar">
+                            <div class="title-icon-wrap">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                            </div>
+                            <h3>Mis Predicciones</h3>
+                            <div class="title-line"></div>
+                        </div>
+                        <div class="predicciones-list" id="misPredicciones">
+                            <div class="predicciones-empty">
+                                <div class="empty-illustration">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                                </div>
+                                <p>No hay predicciones guardadas</p>
+                                <span>Ve a la sección de Predicciones para comenzar</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section class="section" id="admin">
+        <div class="section-header">
+            <h2>⚙️ Panel de Administración</h2>
+            <p>Gestiona usuarios, partidos y predicciones</p>
+        </div>
+        <div class="admin-container">
+            <div class="admin-tabs">
+                <button class="admin-tab active" onclick="showAdminTab('usuarios')">👥 Usuarios</button>
+                <button class="admin-tab" onclick="showAdminTab('partidos')">⚽ Partidos</button>
+                <button class="admin-tab" onclick="showAdminTab('predicciones')">📋 Predicciones</button>
+            </div>
+            
+            <div class="admin-content">
+                <div class="admin-panel active" id="adminUsuarios">
+                    <h3>Gestión de Usuarios</h3>
+                    <div class="admin-table-wrapper">
+                        <table class="admin-table" id="adminUsuariosTable">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Email</th>
+                                    <th>País</th>
+                                    <th>Rol</th>
+                                    <th>Fecha</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="admin-panel" id="adminPartidos">
+                    <h3>Gestión de Partidos</h3>
+                    <div id="adminPartidosList"></div>
+                </div>
+                
+                <div class="admin-panel" id="adminPredicciones">
+                    <h3>Moderación de Predicciones</h3>
+                    <div id="adminPrediccionesList"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <footer class="site-footer">
+        <div class="footer-columns">
+            <div class="footer-col">
+                <h4>La Cita del Mundo</h4>
+                <div class="footer-info">
+                    <p>11 Jun — 19 Jul 2026</p>
+                    <p>48 equipos clasificados</p>
+                    <p>104 partidos en total</p>
+                    <p>16 estadios sede</p>
+                </div>
+                <div class="footer-flags">
+                    <img src="flags/mx.png" alt="México" style="height: 24px; border-radius: 3px;">
+                    <img src="flags/us.png" alt="Estados Unidos" style="height: 24px; border-radius: 3px;">
+                    <img src="flags/ca.png" alt="Canadá" style="height: 24px; border-radius: 3px;">
+                </div>
+            </div>
+            
+            <div class="footer-col">
+                <h4>Síguenos</h4>
+                <div class="footer-social">
+                    <a href="https://x.com/fifaworldcup" target="_blank" class="social-item">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                        <span>X (Twitter)</span>
+                    </a>
+                    <a href="https://www.instagram.com/fifaworldcup" target="_blank" class="social-item">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                        <span>Instagram</span>
+                    </a>
+                    <a href="https://www.youtube.com/@FIFA" target="_blank" class="social-item">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon></svg>
+                        <span>YouTube</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer-bottom">
+            <p>© 2026 Mundial FIFA — Todos los derechos reservados.</p>
+        </div>
+    </footer>
+    
+    <script>
+        if (typeof firebase !== 'undefined') {
+            const firebaseConfig = {
+                apiKey: "AIzaSyCT-3BZSpeOYbt_H7tiIYWLSMT65WKoUrU",
+                authDomain: "mundial-2026-1846b.firebaseapp.com",
+                projectId: "mundial-2026-1846b",
+                storageBucket: "mundial-2026-1846b.firebasestorage.app",
+                messagingSenderId: "836463033638",
+                appId: "1:836463033638:web:1845f56014b2c2a6a5d5e7"
+            };
+            firebase.initializeApp(firebaseConfig);
+            window.db = firebase.firestore();
+        }
+    </script>
+</body>
+</html>
