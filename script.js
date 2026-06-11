@@ -1519,10 +1519,10 @@ function saveQuinielaToStorage() {
         }).then(() => {
             console.log('Predicciones guardadas en Firebase');
             cargarPrediccionesMiCuenta();
-        }).catch(e => console.log('Error:', e));
+        }).catch(e => {
+            console.log('Firestore no disponible, guardado solo local:', e);
+        });
     }
-    
-    alert('Predicciones guardadas correctamente');
     cargarPrediccionesMiCuenta();
 }
 
@@ -1579,8 +1579,62 @@ function cargarPrediccionesMiCuenta() {
         return;
     }
     
+    function mostrarPrediccionesLocales() {
+        const predLocal = localStorage.getItem('predicciones');
+        if (!predLocal) {
+            container.innerHTML = `
+                <div class="predicciones-empty">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    <p>No tienes predicciones guardadas</p>
+                    <span>Ve a la sección de Predicciones para comenzar</span>
+                </div>`;
+            if (document.getElementById('statPredicciones')) document.getElementById('statPredicciones').textContent = '0';
+            if (document.getElementById('statPartidos')) document.getElementById('statPartidos').textContent = '0';
+            return;
+        }
+        const pred = JSON.parse(predLocal);
+        const count = Object.keys(pred).length;
+        if (document.getElementById('statPredicciones')) document.getElementById('statPredicciones').textContent = '1';
+        if (document.getElementById('statPartidos')) document.getElementById('statPartidos').textContent = count;
+
+        let matchesHtml = '';
+        Object.entries(pred).forEach(([key, value]) => {
+            const matchIndex = parseInt(key);
+            const match = matches[matchIndex];
+            if (match) {
+                matchesHtml += `
+                <div class="prediccion-match-row">
+                    <div class="prediccion-match-teams">
+                        <span class="prediccion-team-name">${match.team1}</span>
+                        <span class="prediccion-vs">vs</span>
+                        <span class="prediccion-team-name">${match.team2}</span>
+                    </div>
+                    <div class="prediccion-score">
+                        <span class="prediccion-score-value">${value.team1 || '-'}</span>
+                        <span class="prediccion-score-separator">-</span>
+                        <span class="prediccion-score-value">${value.team2 || '-'}</span>
+                    </div>
+                </div>`;
+            }
+        });
+
+        container.innerHTML = `
+            <div class="prediccion-card">
+                <div class="prediccion-header">
+                    <div class="prediccion-info">
+                        <span class="prediccion-numero">Mis Predicciones</span>
+                        <span class="prediccion-meta">${count} partidos • Guardado local</span>
+                    </div>
+                </div>
+                <div class="prediccion-detalle" style="display:block;">
+                    <div class="prediccion-detalle-title">Partidos Pronosticados</div>
+                    ${matchesHtml}
+                </div>
+            </div>`;
+    }
+
     if (typeof window.db !== 'undefined') {
-        window.db.collection('predicciones').where('email', '==', usuario.email).orderBy('fecha', 'desc').get()
+        window.db.collection('predicciones').where('email', '==', usuario.email).get()
         .then((snapshot) => {
             let totalPartidos = 0;
             let index = 1;
@@ -1601,12 +1655,7 @@ function cargarPrediccionesMiCuenta() {
             if (document.getElementById('statPartidos')) document.getElementById('statPartidos').textContent = totalPartidos;
             
             if (prediccionesData.length === 0) {
-                container.innerHTML = `
-                    <div class="predicciones-empty">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                        <p>No tienes predicciones guardadas</p>
-                        <span>Ve a la sección de Predicciones para comenzar</span>
-                    </div>`;
+                mostrarPrediccionesLocales();
                 return;
             }
             
@@ -1659,12 +1708,8 @@ function cargarPrediccionesMiCuenta() {
             container.innerHTML = html;
         })
         .catch(e => {
-            console.log('Error:', e);
-            container.innerHTML = `
-                <div class="predicciones-empty">
-                    <p>Error al cargar predicciones</p>
-                    <span>Intenta de nuevo más tarde</span>
-                </div>`;
+            console.log('Error cargando desde Firestore, usando local:', e);
+            mostrarPrediccionesLocales();
         });
     } else {
         const predLocal = localStorage.getItem('predicciones');
