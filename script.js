@@ -1511,7 +1511,7 @@ function saveQuinielaToStorage() {
     const usuario = getCurrentUser();
     
     if (typeof window.db !== 'undefined' && usuario.email) {
-        window.db.collection('predicciones').add({
+        window.db.collection('predicciones').doc(usuario.email).set({
             uid: usuario.uid || '',
             email: usuario.email,
             predicciones: quiniela,
@@ -1521,9 +1521,11 @@ function saveQuinielaToStorage() {
             cargarPrediccionesMiCuenta();
         }).catch(e => {
             console.log('Firestore no disponible, guardado solo local:', e);
+            cargarPrediccionesMiCuenta();
         });
+    } else {
+        cargarPrediccionesMiCuenta();
     }
-    cargarPrediccionesMiCuenta();
 }
 
 function cargarPrediccionesMiCuenta() {
