@@ -1053,8 +1053,8 @@ document.addEventListener('keydown', (e) => {
 
 function renderMatches() {
     const list = document.getElementById('matchList');
-    const filterContainer = document.getElementById('groupFilter');
-    if (!list || !filterContainer) return;
+    const groupFilter = document.getElementById('groupFilter');
+    if (!list || !groupFilter) return;
     
     const sortedMatches = [...matches].sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
     
@@ -1068,16 +1068,16 @@ function renderMatches() {
         "Final": "Final"
     };
     
-    const newFilter = filterContainer.cloneNode(false);
+    const newFilter = groupFilter.cloneNode(false);
     newFilter.innerHTML = '<option value="all">Todos los partidos</option>' + 
         uniqueGroups.map(g => `<option value="${g}">${groupLabels[g] || 'Grupo ' + g}</option>`).join('');
-    filterContainer.parentNode.replaceChild(newFilter, filterContainer);
+    groupFilter.parentNode.replaceChild(newFilter, groupFilter);
     
     newFilter.addEventListener('change', () => {
-        const filterMatches = newFilter.value === 'all' 
+        const filtered = newFilter.value === 'all' 
             ? sortedMatches 
             : sortedMatches.filter(m => m.group === newFilter.value);
-        list.innerHTML = renderMatchCards(filterMatches);
+        list.innerHTML = renderMatchCards(filtered);
     });
     
     list.innerHTML = renderMatchCards(sortedMatches);
