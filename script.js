@@ -1053,7 +1053,8 @@ document.addEventListener('keydown', (e) => {
 
 function renderMatches() {
     const list = document.getElementById('matchList');
-    const groupFilter = document.getElementById('groupFilter');
+    const filterContainer = document.getElementById('groupFilter');
+    if (!list || !filterContainer) return;
     
     const sortedMatches = [...matches].sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
     
@@ -1066,13 +1067,16 @@ function renderMatches() {
         "3° lugar": "Tercer Lugar",
         "Final": "Final"
     };
-    groupFilter.innerHTML = '<option value="all">Todos los partidos</option>' + 
-        uniqueGroups.map(g => `<option value="${g}">${groupLabels[g] || 'Grupo ' + g}</option>`).join('');
     
-    groupFilter.addEventListener('change', () => {
-        const filterMatches = groupFilter.value === 'all' 
+    const newFilter = filterContainer.cloneNode(false);
+    newFilter.innerHTML = '<option value="all">Todos los partidos</option>' + 
+        uniqueGroups.map(g => `<option value="${g}">${groupLabels[g] || 'Grupo ' + g}</option>`).join('');
+    filterContainer.parentNode.replaceChild(newFilter, filterContainer);
+    
+    newFilter.addEventListener('change', () => {
+        const filterMatches = newFilter.value === 'all' 
             ? sortedMatches 
-            : sortedMatches.filter(m => m.group === groupFilter.value);
+            : sortedMatches.filter(m => m.group === newFilter.value);
         list.innerHTML = renderMatchCards(filterMatches);
     });
     
@@ -4314,15 +4318,18 @@ function guardarResultado(index) {
                 console.log('Resultado guardado en Firebase');
                 resultadosPartidos[index] = { score1, score2 };
                 renderAdminPartidos();
+                renderMatches();
             })
             .catch(e => {
                 console.log('Error guardando en Firestore, guardado local:', e);
                 resultadosPartidos[index] = { score1, score2 };
                 renderAdminPartidos();
+                renderMatches();
             });
     } else {
         resultadosPartidos[index] = { score1, score2 };
         renderAdminPartidos();
+        renderMatches();
     }
 }
 
